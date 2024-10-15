@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.mokkachocolata.minecraft.mod.luaruntime.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "MainMenuMixin",
+    "TickMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

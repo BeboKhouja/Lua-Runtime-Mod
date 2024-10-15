@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "lua_runtime_mod",
+  "version": "${version}",
+  "name": "Lua Runtime Mod",
+  "description": "Run Lua scripts!",
+  "authors": [
+    "Mokka Chocolata"
+  ],
+  "contact": {
+    "email": "mokkachocolata@gmail.com"
+  },
+  "license": "GPL-3.0",
+  "icon": "assets/lua_runtime_mod/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "com.mokkachocolata.minecraft.mod.luaruntime.client.MainClassClient"
+    ],
+    "main": [
+      "com.mokkachocolata.minecraft.mod.luaruntime.MainClass"
+    ]
+  },
+  "mixins": [
+    "lua_runtime_mod.mixins.json",
+    {
+      "config": "lua_runtime_mod.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
