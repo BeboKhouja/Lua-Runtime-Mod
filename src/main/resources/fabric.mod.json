@@ -8,7 +8,10 @@
     "Mokka Chocolata"
   ],
   "contact": {
-    "email": "mokkachocolata@gmail.com"
+    "email": "mokkachocolata@gmail.com",
+    "issues": "https://github.com/BeboKhouja/Lua-Runtime-Mod/issues",
+    "sources": "https://github.com/BeboKhouja/Lua-Runtime-Mod",
+    "homepage": "https://lua-runtime-docs.netlify.app"
   },
   "license": "GPL-3.0",
   "icon": "assets/lua_runtime_mod/icon.png",

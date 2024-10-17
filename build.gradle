@@ -38,6 +38,7 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
     implementation 'org.luaj:luaj-jse:3.0.1'
+    implementation 'commons-io:commons-io:2.14.0'
 }
 
 processResources {
