@@ -10,7 +10,6 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.TextWidget;
 import net.minecraft.text.Text;
 import org.luaj.vm2.LuaFunction;
-import org.luaj.vm2.LuaValue;
 
 import java.util.ArrayList;
 
@@ -18,7 +17,7 @@ import java.util.ArrayList;
 public class LuaGUI extends Screen {
     public Screen parent;
     public boolean Cancelable = true;
-    public LuaValue CloseCallback;
+    public ArrayList<LuaEvent> CloseCallback = new ArrayList<>();
     public ArrayList<ClickableWidget> clickableWidgets = new ArrayList<>();
 
     public LuaGUI(Text title) {
@@ -58,16 +57,13 @@ public class LuaGUI extends Screen {
 
     @Override
     public void removed() {
-        if (CloseCallback != null && CloseCallback.isfunction())
-            CloseCallback.call();
+        for (LuaEvent event : CloseCallback) event.Call();
     }
 
     @Override
     public void close() {
         assert client != null;
-        if (parent != null && Cancelable)
-            client.setScreen(parent);
-        else if (parent == null && Cancelable)
-            client.setScreen(null);
+        if (!Cancelable) return;
+        client.setScreen(parent);
     }
 }

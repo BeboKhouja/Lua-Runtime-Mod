@@ -1,5 +1,6 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client;
 
+import com.mokkachocolata.minecraft.mod.luaruntime.ee;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -11,14 +12,18 @@ import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.TextWidget;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.server.command.CommandManager;
+import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONObject;
 import org.luaj.vm2.*;
 import org.luaj.vm2.lib.OneArgFunction;
-import org.luaj.vm2.lib.ThreeArgFunction;
 import org.luaj.vm2.lib.TwoArgFunction;
 import org.luaj.vm2.lib.ZeroArgFunction;
 import org.luaj.vm2.lib.jse.JsePlatform;
@@ -27,6 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -35,10 +42,12 @@ import java.util.Objects;
 @Environment(EnvType.CLIENT)
 public class MainClassClient implements ClientModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("luaruntimemod");
-    public final ArrayList<LuaValue> listeners = new ArrayList<>();
+    public final ArrayList<LuaEvent> mainMenuListeners = new ArrayList<>();
     public static MainClassClient Instance;
     public MainClassClient.Minecraft LuaInstance;
-    public final ArrayList<LuaValue> tickListener = new ArrayList<>();
+    public final ArrayList<LuaEvent> tickListener = new ArrayList<>();
+    public ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee = new ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee();
+    public Config conf;
 
     public class Minecraft extends TwoArgFunction {
         private final LuaValue functions = tableOf();
@@ -57,10 +66,17 @@ public class MainClassClient implements ClientModInitializer {
             });
             functions.set("Platform", System.getProperty("os.name"));
             functions.set("Version", "1.21.1");
+            functions.set("LuaRuntimeVersion", 0.3);
             functions.set("ClientOrServer", "Client");
             {
                 LuaValue table = getKeyTable();
                 functions.set("Keybinds", table);
+            }
+            {
+                LuaValue table = tableOf();
+                table.set("ChatEnabled", LuaValue.valueOf(conf.allowChat));
+                table.set("CommandsEnabled", LuaValue.valueOf(conf.allowCommands));
+                functions.set("Config", table);
             }
             functions.set("RegisterKeybind", new TwoArgFunction() {
                 @Override
@@ -92,9 +108,9 @@ public class MainClassClient implements ClientModInitializer {
             functions.set("AddClientLoadedListener", new OneArgFunction() {
                 @Override
                 public LuaValue call(LuaValue arg) {
-                    if (!arg.isfunction()) throw new LuaError("Not a function");
-                    listeners.add(arg);
-                    return NONE;
+                    LuaEvent event = new LuaEvent(arg.checkfunction());
+                    mainMenuListeners.add(event);
+                    return event.GetTable();
                 }
             });
             functions.set("CreateNewGUI", new OneArgFunction() {
@@ -121,11 +137,12 @@ public class MainClassClient implements ClientModInitializer {
                             return NONE;
                         }
                     });
-                    table.set("SetCloseListener", new OneArgFunction() {
+                    table.set("AddCloseListener", new OneArgFunction() {
                         @Override
                         public LuaValue call(LuaValue arg) {
-                            thisGui.CloseCallback = arg;
-                            return NONE;
+                            LuaEvent event = new LuaEvent(arg.checkfunction());
+                            thisGui.CloseCallback.add(event);
+                            return event.GetTable();
                         }
                     });
                     table.set("Close", new ZeroArgFunction() {
@@ -182,6 +199,40 @@ public class MainClassClient implements ClientModInitializer {
                                             return NONE;
                                         }
                                     });
+                                    meta.set("IsFocused", new ZeroArgFunction() {
+                                        @Override
+                                        public LuaValue call() {
+                                            return LuaValue.valueOf(builded.isFocused());
+                                        }
+                                    });
+                                    meta.set("SetText", new OneArgFunction() {
+                                        @Override
+                                        public LuaValue call(LuaValue arg) {
+                                            builded.setMessage(Text.literal(arg.toString()));
+                                            return NONE;
+                                        }
+                                    });
+                                    meta.set("SetTooltip", new OneArgFunction() {
+                                        @Override
+                                        public LuaValue call(LuaValue arg) {
+                                            builded.setTooltip(Tooltip.of(Text.literal(arg.toString())));
+                                            return NONE;
+                                        }
+                                    });
+                                    meta.set("SetPosition", new TwoArgFunction() {
+                                        @Override
+                                        public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                                            builded.setPosition(arg1.toint(), arg2.toint());
+                                            return NONE;
+                                        }
+                                    });
+                                    meta.set("SetSize", new TwoArgFunction() {
+                                        @Override
+                                        public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                                            builded.setDimensions(arg1.toint() / 2 - 205, arg2.toint());
+                                            return NONE;
+                                        }
+                                    });
                                     return meta;
                                 }
                             });
@@ -206,6 +257,12 @@ public class MainClassClient implements ClientModInitializer {
                                     button.setX(arg1.toint());
                                     button.setY(arg2.toint());
                                     return NONE;
+                                }
+                            });
+                            table.set("IsFocused", new ZeroArgFunction() {
+                                @Override
+                                public LuaValue call() {
+                                    return LuaValue.valueOf(button.isFocused());
                                 }
                             });
                             table.set("SetSize", new TwoArgFunction() {
@@ -235,11 +292,11 @@ public class MainClassClient implements ClientModInitializer {
                             return table;
                         }
                     });
-                    table.set("NewTextField", new ThreeArgFunction() {
+                    table.set("NewTextField", new TwoArgFunction() {
                         @Override
-                        public LuaValue call(LuaValue arg1, LuaValue arg2, LuaValue arg3) {
+                        public LuaValue call(LuaValue arg1, LuaValue arg2) {
                             LuaValue table = tableOf();
-                            TextFieldWidget button = thisGui.newTextFieldWidget(MinecraftClient.getInstance().textRenderer, arg1.checkint(), arg2.checkint(), Text.literal(arg3.toString()));
+                            TextFieldWidget button = thisGui.newTextFieldWidget(MinecraftClient.getInstance().textRenderer, arg1.checkint(), arg2.checkint(), Text.literal(""));
                             table.set("SetPlaceholder", new OneArgFunction() {
                                 @Override
                                 public LuaValue call(LuaValue arg) {
@@ -264,7 +321,7 @@ public class MainClassClient implements ClientModInitializer {
                             table.set("IsFocused", new ZeroArgFunction() {
                                 @Override
                                 public LuaValue call() {
-                                    return LuaValue.valueOf(button.isActive());
+                                    return LuaValue.valueOf(button.isFocused());
                                 }
                             });
                             table.set("SetPosition", new TwoArgFunction() {
@@ -311,6 +368,36 @@ public class MainClassClient implements ClientModInitializer {
                     return table;
                 }
             });
+            functions.set("RunCommand", new OneArgFunction() {
+                @Override
+                public LuaValue call(LuaValue arg) {
+                    if (!conf.allowCommands) throw new LuaError("Commands are not allowed by config");
+                    ClientPlayerEntity player = MinecraftClient.getInstance().player;
+                    if (player != null) {
+                        CommandManager commandManager = Objects.requireNonNull(player.getServer()).getCommandManager();
+                        ServerCommandSource commandSource = player.getServer().getCommandSource();
+                        commandManager.executeWithPrefix(commandSource, arg.toString());
+                    }
+                    return NONE;
+                }
+            });
+            functions.set("SendMessage", new OneArgFunction() {
+                @Override
+                public LuaValue call(LuaValue arg) {
+                    assert MinecraftClient.getInstance().player != null;
+                    MinecraftClient.getInstance().player.sendMessage(Text.literal(arg.toString()));
+                    return NONE;
+                }
+            });
+            functions.set("Chat", new OneArgFunction() {
+                @Override
+                public LuaValue call(LuaValue arg) {
+                    if (!conf.allowChat) throw new LuaError("Sending messages to other players are not allowed by config");
+                    assert MinecraftClient.getInstance().player != null;
+                        MinecraftClient.getInstance().player.networkHandler.sendChatMessage(arg.toString());
+                    return NONE;
+                }
+            });
             functions.set("GetFPS", new ZeroArgFunction() {
                 @Override
                 public LuaValue call() {
@@ -323,37 +410,41 @@ public class MainClassClient implements ClientModInitializer {
                 clientTicks.set("ForTicks", new OneArgFunction() {
                     @Override
                     public LuaValue call(LuaValue arg) {
-                        arg.checkfunction(/* nothing so far */);
-                        tickListener.add(arg);
-                        return NONE;
+                        LuaEvent event = new LuaEvent(arg.checkfunction(/* nothing so far */));
+                        tickListener.add(event);
+                        return event.GetTable();
                     }
                 });
                 clientTicks.set("Start", new OneArgFunction() {
                     @Override
                     public LuaValue call(LuaValue arg) {
-                        ClientTickEvents.START_CLIENT_TICK.register(client -> arg.checkfunction().call());
-                        return NONE;
+                        LuaEvent event = new LuaEvent(arg.checkfunction());
+                        ClientTickEvents.START_CLIENT_TICK.register(client -> event.Call());
+                        return event.GetTable();
                     }
                 });
                 clientTicks.set("StartWorld", new OneArgFunction() {
                     @Override
                     public LuaValue call(LuaValue arg) {
-                        ClientTickEvents.START_WORLD_TICK.register(world -> arg.checkfunction().call());
-                        return NONE;
+                        LuaEvent event = new LuaEvent(arg.checkfunction());
+                        ClientTickEvents.START_WORLD_TICK.register(world -> event.Call());
+                        return event.GetTable();
                     }
                 });
                 clientTicks.set("End", new OneArgFunction() {
                     @Override
                     public LuaValue call(LuaValue arg) {
-                        ClientTickEvents.END_CLIENT_TICK.register(client -> arg.checkfunction().call());
-                        return NONE;
+                        LuaEvent event = new LuaEvent(arg.checkfunction());
+                        ClientTickEvents.END_CLIENT_TICK.register(client -> event.Call());
+                        return event.GetTable();
                     }
                 });
                 clientTicks.set("EndWorld", new OneArgFunction() {
                     @Override
                     public LuaValue call(LuaValue arg) {
-                        ClientTickEvents.END_WORLD_TICK.register(world -> arg.checkfunction().call());
-                        return NONE;
+                        LuaEvent event = new LuaEvent(arg.checkfunction());
+                        ClientTickEvents.END_WORLD_TICK.register(world -> event.Call());
+                        return event.GetTable();
                     }
                 });
                 ticks.set("Client", clientTicks);
@@ -417,14 +508,40 @@ public class MainClassClient implements ClientModInitializer {
         public Minecraft() {}
     }
 
+
     @Override
     public void onInitializeClient() {
-        LOGGER.info("SpongePowered LUAU Subsystem Version=0.8.7 Source=file:/home/user/net.fabricmc/sponge-mixin/0.15.3+mixin.0.8.7/51ee0a44ab05f6fddd66b09e66b3a16904f9c55d/sponge-mixin-0.15.3+mixin.0.8.7.jar Service=Knot/Fabric Env=CLIENT                       Just kidding obviously");
-        File scripts = FabricLoader.getInstance().getGameDir().toFile();
+        LOGGER.info("SpongePowered LUAU Subsystem Version=0.8.7 Source=file:/home/user/net.fabricmc/sponge-mixin/0.15.3+mixin.0.8.7/51ee0a44ab05f6fddd66b09e66b3a16904f9c55d/sponge-mixin-0.15.3+mixin.0.8.7.jar Service=Knot/Fabric Env=CLIENT                       Just kidding obviously"); // Why not
         Instance = this;
-        File scriptsFolder = new File(scripts, "lua");
+        File scriptsFolder = new File(FabricLoader.getInstance().getGameDir().toFile(), "lua");
+        File config = new File(FabricLoader.getInstance().getConfigDir().toFile(), "lua_runtime_config.json");
+        if (!config.exists()) {
+            try {
+                conf = new Config(false, false);
+                config.createNewFile();
+                JSONObject configJSON = new JSONObject();
+                configJSON.put("allowCommands", false);
+                configJSON.put("allowChat", false);
+                FileWriter writer = new FileWriter(config);
+                writer.write(configJSON.toString(4));
+                writer.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            try {
+                FileInputStream inputStream = new FileInputStream(config);
+                String fileContents = IOUtils.toString(inputStream);
+                JSONObject configJSON = new JSONObject(fileContents);
+                conf = new Config(configJSON.getBoolean("allowCommands"), configJSON.getBoolean("allowChat"));
+            } catch (Exception e) {
+                LOGGER.error("An error occurred trying to read the config file!");
+                throw new RuntimeException(e);
+            }
+        }
         if (!scriptsFolder.exists()) scriptsFolder.mkdir();
         Globals g = JsePlatform.standardGlobals();
+        g.set("luajava", LuaValue.NIL);
         LuaInstance = new Minecraft();
         g.load(LuaInstance);
         for (File child : Objects.requireNonNull(scriptsFolder.listFiles())) {
@@ -432,7 +549,12 @@ public class MainClassClient implements ClientModInitializer {
                 if (FilenameUtils.getExtension(child.toPath().toString()).equals("lua")) {
                     String contents = Files.readString(child.toPath());
                     LOGGER.info("Loading {}", child.getName());
-                    g.load(contents).call();
+                    try {
+                        g.load(contents).call();
+                    } catch (Exception e) {
+                        LOGGER.error("An error occurred while executing {}!", child.getName());
+                        LOGGER.error(e.getMessage());
+                    }
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);

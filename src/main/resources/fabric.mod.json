@@ -4,6 +4,7 @@
   "version": "${version}",
   "name": "Lua Runtime Mod",
   "description": "Run Lua scripts!",
+  
   "authors": [
     "Mokka Chocolata"
   ],
@@ -35,5 +36,13 @@
     "fabricloader": ">=${loader_version}",
     "fabric": "*",
     "minecraft": "${minecraft_version}"
+  },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.curseforge": "https://www.curseforge.com/minecraft/mc-mods/lua-runtime"
+      },
+      "update_checker": false
+    }
   }
 }

@@ -39,6 +39,10 @@ dependencies {
 
     implementation 'org.luaj:luaj-jse:3.0.1'
     implementation 'commons-io:commons-io:2.14.0'
+    include 'org.luaj:luaj-jse:3.0.1'
+    include 'commons-io:commons-io:2.14.0'
+    implementation 'org.json:json:20240303'
+    include 'org.json:json:20240303'
 }
 
 processResources {
