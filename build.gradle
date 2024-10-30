@@ -38,6 +38,7 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
     implementation 'org.luaj:luaj-jse:3.0.1'
+    implementation 'com.yevdo:jwildcard:1.4'
     implementation 'commons-io:commons-io:2.14.0'
     include 'org.luaj:luaj-jse:3.0.1'
     include 'commons-io:commons-io:2.14.0'

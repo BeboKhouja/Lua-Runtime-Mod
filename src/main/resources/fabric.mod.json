@@ -40,9 +40,10 @@
   "custom": {
     "modmenu": {
       "links": {
-        "modmenu.curseforge": "https://www.curseforge.com/minecraft/mc-mods/lua-runtime"
+        "modmenu.curseforge": "https://www.curseforge.com/minecraft/mc-mods/lua-runtime",
+        "modmenu.modrinth": "https://modrinth.com/mod/lua"
       },
-      "update_checker": false
+      "update_checker": true
     }
   }
 }

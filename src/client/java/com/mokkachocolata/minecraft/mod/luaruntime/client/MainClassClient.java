@@ -1,6 +1,7 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client;
 
 import com.mokkachocolata.minecraft.mod.luaruntime.ee;
+import com.yevdo.jwildcard.JWildcard;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -21,9 +22,11 @@ import net.minecraft.text.Text;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.luaj.vm2.*;
 import org.luaj.vm2.lib.OneArgFunction;
+import org.luaj.vm2.lib.ThreeArgFunction;
 import org.luaj.vm2.lib.TwoArgFunction;
 import org.luaj.vm2.lib.ZeroArgFunction;
 import org.luaj.vm2.lib.jse.JsePlatform;
@@ -31,13 +34,12 @@ import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.lang.reflect.Array;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Objects;
+import java.util.*;
 
 @Environment(EnvType.CLIENT)
 public class MainClassClient implements ClientModInitializer {
@@ -49,14 +51,37 @@ public class MainClassClient implements ClientModInitializer {
     public ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee = new ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee();
     public Config conf;
 
+    private <T> T[] toArray(Collection collection, Class<T> clazz) {
+        T[] array = (T[]) Array.newInstance(clazz, collection.size());
+        return ((Collection<T>) collection).toArray(array);
+    }
+
     public class Minecraft extends TwoArgFunction {
         private final LuaValue functions = tableOf();
         public void AddToTable(LuaValue value) {
             functions.add(value);
         }
+        private boolean CheckIfURLisBlocked(String url) {
+            for (Config.URLConfig urlConfig : conf.urls)
+                if (Objects.equals(urlConfig.url, "$local") && (JWildcard.matches("*127.0.*.*", url) ||
+                        JWildcard.matches("*192.168.*.*", url) ||
+                        JWildcard.matches("*10.0.*.*", url) ||
+                        JWildcard.matches("*0.0.*.*", url)
+                ) && !urlConfig.allow)
+                    return true;
+                else return JWildcard.matches("*" + urlConfig.url, url) && !urlConfig.allow;
+            return false;
+        }
         @Override
         public LuaValue call(LuaValue arg1, LuaValue arg2) {
             final ArrayList<LuaGUI> guis = new ArrayList<>();
+            arg2.set("print", new OneArgFunction() {
+                @Override
+                public LuaValue call(LuaValue arg) {
+                    LOGGER.info(arg.toString());
+                    return NIL;
+                }
+            });
             functions.set("Print", new OneArgFunction() {
                 @Override
                 public LuaValue call(LuaValue arg) {
@@ -73,9 +98,73 @@ public class MainClassClient implements ClientModInitializer {
                 functions.set("Keybinds", table);
             }
             {
+                LuaValue httpTable = tableOf();
+                httpTable.set("Get", new OneArgFunction() {
+                    @Override
+                    public LuaValue call(LuaValue arg1) {
+                        if (CheckIfURLisBlocked(arg1.toString())) throw new LuaError("URL blocked by config");
+                        StringBuilder result = new StringBuilder();
+                        try {
+                            URL url = new URI(arg1.toString()).toURL();
+                            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                            conn.setRequestMethod("GET");
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                            for (String line; (line = reader.readLine()) != null;) result.append(line);
+                            return LuaValue.valueOf(result.toString());
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                });
+                httpTable.set("Post", new ThreeArgFunction() {
+                    @Override
+                    public LuaValue call(LuaValue url, LuaValue args, LuaValue contentType) {
+                        if (CheckIfURLisBlocked(url.toString())) throw new LuaError("URL blocked by config");
+                        java.util.Map<String, String> arguments = new java.util.HashMap<>();
+                        for (int i = 0; i < args.checktable().length(); i++) {
+                            args.get(i).checktable();
+                            arguments.put(args.get(i).get("name").toString(), args.get(i).get("value").toString());
+                        }
+                        StringBuilder sb = new StringBuilder();
+                        try {
+                            URLConnection con = new URI(url.toString()).toURL().openConnection();
+                            HttpURLConnection urlConnection = (HttpURLConnection) con;
+                            urlConnection.setRequestMethod("POST");
+                            urlConnection.setDoOutput(true);
+                            StringJoiner sj = new StringJoiner("&");
+                            for (Map.Entry<String, String> entry : arguments.entrySet())
+                                sj.add(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8) + "="
+                                        + URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
+                            byte[] out = sj.toString().getBytes(StandardCharsets.UTF_8);
+                            int len = out.length;
+                            urlConnection.setFixedLengthStreamingMode(len);
+                            urlConnection.setRequestProperty("Content-Type", contentType.toString());
+                            urlConnection.connect();
+                            OutputStream os = urlConnection.getOutputStream();
+                            os.write(out);
+                            os.flush();
+                            os.close();
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+                            for (String line; (line = reader.readLine()) != null;) sb.append(line);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                        return LuaValue.valueOf(sb.toString());
+                    }
+                });
+                functions.set("Http", httpTable);
+            }
+            {
                 LuaValue table = tableOf();
                 table.set("ChatEnabled", LuaValue.valueOf(conf.allowChat));
                 table.set("CommandsEnabled", LuaValue.valueOf(conf.allowCommands));
+                LuaValue blockedTables = tableOf();
+                for (int i = 0; i < conf.urls.length; i++) {
+                    LuaValue blockUrlTable = tableOf();
+                    blockUrlTable.set("Allowed", LuaValue.valueOf(conf.urls[i].allow));
+                    blockUrlTable.set("URL", LuaValue.valueOf(conf.urls[i].url));
+                    blockedTables.set(i, blockUrlTable);
+                }
                 functions.set("Config", table);
             }
             functions.set("RegisterKeybind", new TwoArgFunction() {
@@ -517,13 +606,13 @@ public class MainClassClient implements ClientModInitializer {
         File config = new File(FabricLoader.getInstance().getConfigDir().toFile(), "lua_runtime_config.json");
         if (!config.exists()) {
             try {
-                conf = new Config(false, false);
-                config.createNewFile();
-                JSONObject configJSON = new JSONObject();
-                configJSON.put("allowCommands", false);
-                configJSON.put("allowChat", false);
-                FileWriter writer = new FileWriter(config);
-                writer.write(configJSON.toString(4));
+                conf = new Config(false, false, new Config.URLConfig[] {
+                        new Config.URLConfig(
+                                false,
+                                "$local"
+                        )
+                });
+                FileWriter writer = createConfigFile(config);
                 writer.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -533,7 +622,13 @@ public class MainClassClient implements ClientModInitializer {
                 FileInputStream inputStream = new FileInputStream(config);
                 String fileContents = IOUtils.toString(inputStream);
                 JSONObject configJSON = new JSONObject(fileContents);
-                conf = new Config(configJSON.getBoolean("allowCommands"), configJSON.getBoolean("allowChat"));
+                ArrayList<Config.URLConfig> urlConfigs = new ArrayList<>();
+                JSONArray urls = configJSON.getJSONArray("urls");
+                for (int i = 0; i < urls.length(); i++) {
+                    JSONObject object = urls.getJSONObject(i);
+                    urlConfigs.add(new Config.URLConfig(object.getBoolean("allow"), object.getString("url")));
+                }
+                conf = new Config(configJSON.getBoolean("allowCommands"), configJSON.getBoolean("allowChat"), toArray(urlConfigs, Config.URLConfig.class));
             } catch (Exception e) {
                 LOGGER.error("An error occurred trying to read the config file!");
                 throw new RuntimeException(e);
@@ -560,5 +655,21 @@ public class MainClassClient implements ClientModInitializer {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    private static @NotNull FileWriter createConfigFile(File config) throws IOException {
+        config.createNewFile();
+        JSONObject configJSON = new JSONObject();
+        configJSON.put("allowCommands", false);
+        configJSON.put("allowChat", false);
+        JSONArray urls = new JSONArray();
+        JSONObject local = new JSONObject();
+        local.put("url", "$local");
+        local.put("allow", false);
+        urls.put(local);
+        configJSON.put("urls", urls);
+        FileWriter writer = new FileWriter(config);
+        writer.write(configJSON.toString(4));
+        return writer;
     }
 }
