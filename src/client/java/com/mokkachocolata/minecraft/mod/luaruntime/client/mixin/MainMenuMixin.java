@@ -20,7 +20,7 @@ public abstract class MainMenuMixin extends Screen {
 
     @Inject(at = @At("RETURN"), method = "initWidgetsNormal")
     private void versions(int y, int spacingY, CallbackInfo ci) {
-        this.addDrawableChild(new TextWidget(0, 0, 90, 10, Text.of("Lua Runtime v0.3"), textRenderer));
+        this.addDrawableChild(new TextWidget(0, 0, 90, 10, Text.of("Lua Runtime v0.5"), textRenderer));
         this.addDrawableChild(new TextWidget(0, 10, 120, 10, Text.of("Powered by LuaJ v3.0.1"), textRenderer));
         callScriptsMenuListeners();
     }

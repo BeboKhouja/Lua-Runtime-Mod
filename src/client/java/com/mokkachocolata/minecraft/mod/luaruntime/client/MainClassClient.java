@@ -1,10 +1,14 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client;
 
+import com.mojang.brigadier.context.CommandContext;
 import com.mokkachocolata.minecraft.mod.luaruntime.ee;
 import com.yevdo.jwildcard.JWildcard;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.loader.api.FabricLoader;
@@ -19,16 +23,15 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.Vec2f;
+import net.minecraft.util.math.Vec3d;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.luaj.vm2.*;
-import org.luaj.vm2.lib.OneArgFunction;
-import org.luaj.vm2.lib.ThreeArgFunction;
-import org.luaj.vm2.lib.TwoArgFunction;
-import org.luaj.vm2.lib.ZeroArgFunction;
+import org.luaj.vm2.lib.*;
 import org.luaj.vm2.lib.jse.JsePlatform;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -97,6 +100,35 @@ public class MainClassClient implements ClientModInitializer {
                 LuaValue table = getKeyTable();
                 functions.set("Keybinds", table);
             }
+            LuaValue plrTable = tableOf();
+            {
+                plrTable.set("GetPos", new VarArgFunction() {
+                    @Override
+                    public Varargs invoke(Varargs v) {
+                        assert MinecraftClient.getInstance().player != null;
+                        final ServerCommandSource source = MinecraftClient.getInstance().player.getCommandSource();
+                        Vec3d position = source.getPosition();
+                        return varargsOf(new LuaValue[]{
+                                LuaValue.valueOf(position.x),
+                                LuaValue.valueOf(position.y),
+                                LuaValue.valueOf(position.z),
+                        });
+                    }
+                });
+                plrTable.set("GetRot", new VarArgFunction() {
+                    @Override
+                    public Varargs invoke(Varargs v) {
+                        assert MinecraftClient.getInstance().player != null;
+                        final ServerCommandSource source = MinecraftClient.getInstance().player.getCommandSource();
+                        Vec2f rotation = source.getRotation();
+                        return varargsOf(new LuaValue[]{
+                                LuaValue.valueOf(rotation.x),
+                                LuaValue.valueOf(rotation.y),
+                        });
+                    }
+                });
+            }
+            functions.set("Player", plrTable);
             {
                 LuaValue httpTable = tableOf();
                 httpTable.set("Get", new OneArgFunction() {
@@ -154,6 +186,32 @@ public class MainClassClient implements ClientModInitializer {
                 });
                 functions.set("Http", httpTable);
             }
+            functions.set("AddCommand", new TwoArgFunction() {
+                @Override
+                public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                    var obj = new Object() {
+                        CommandContext<FabricClientCommandSource> Context;
+                    };
+                    ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(ClientCommandManager.literal(arg1.toString())
+                            .executes(context -> {
+                                obj.Context = context;
+                                arg2.checkfunction().call();
+                                return 1;
+                            })
+                    ));
+                    {
+                        LuaValue table = tableOf();
+                        table.set("SendFeedback", new OneArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg1) {
+                                obj.Context.getSource().sendFeedback(Text.literal(arg1.toString()));
+                                return NONE;
+                            }
+                        });
+                        return table;
+                    }
+                }
+            });
             {
                 LuaValue table = tableOf();
                 table.set("ChatEnabled", LuaValue.valueOf(conf.allowChat));
@@ -165,6 +223,7 @@ public class MainClassClient implements ClientModInitializer {
                     blockUrlTable.set("URL", LuaValue.valueOf(conf.urls[i].url));
                     blockedTables.set(i, blockUrlTable);
                 }
+                table.set("BlockedUrls" , blockedTables);
                 functions.set("Config", table);
             }
             functions.set("RegisterKeybind", new TwoArgFunction() {

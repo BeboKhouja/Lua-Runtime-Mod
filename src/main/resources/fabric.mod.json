@@ -37,6 +37,9 @@
     "fabric": "*",
     "minecraft": "${minecraft_version}"
   },
+  "breaks": {
+    "optifabric": "*"
+  },
   "custom": {
     "modmenu": {
       "links": {
