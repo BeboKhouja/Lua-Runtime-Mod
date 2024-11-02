@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ConfirmLinkScreen;
@@ -39,9 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
-import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.*;
 import java.lang.reflect.Array;
@@ -63,6 +62,29 @@ public class MainClassClient implements ClientModInitializer {
     private <T> T[] toArray(Collection collection, Class<T> clazz) {
         T[] array = (T[]) Array.newInstance(clazz, collection.size());
         return ((Collection<T>) collection).toArray(array);
+    }
+
+    private boolean IsRunningOnPojavLauncher() {
+        if (System.getenv("POJAV_RENDERER") != null) return true;
+        String librarySearchPaths = System.getProperty("java.library.path", null);
+
+        if (librarySearchPaths != null)
+            for (var path: librarySearchPaths.split(":"))
+                if (isKnownAndroidPathFragment(path)) {
+                    LOGGER.warn("Found a library search path which seems like its hosted on an Android filesystem (It's actually ext4): {}", path);
+                    return true;
+                }
+
+        String workingDirectory = System.getProperty("user.home", null);
+
+        if (workingDirectory != null && isKnownAndroidPathFragment(workingDirectory))
+            LOGGER.warn("It looks like the working directory is in an Android filesystem (cant repeat to say that again): {}", workingDirectory);
+
+        return false;
+    }
+
+    private boolean isKnownAndroidPathFragment(String path) {
+        return path.matches("/data/user/[0-9]+/net\\.kdt\\.pojavlaunch");
     }
 
     public class Minecraft extends TwoArgFunction {
@@ -262,6 +284,8 @@ public class MainClassClient implements ClientModInitializer {
                 table.set("CopyEnabled", valueOf(conf.allowCopy));
                 table.set("PasteEnabled", valueOf(conf.allowPaste));
                 table.set("OpenLinkEnabled", valueOf(conf.allowOpenLinks));
+                table.set("ListenChatEnabled", valueOf(conf.allowListenLinks));
+                table.set("IsPojavLauncher", valueOf(IsRunningOnPojavLauncher()));
                 functions.set("Config", table);
             }
             functions.set("RegisterKeybind", new TwoArgFunction() {
@@ -289,6 +313,17 @@ public class MainClassClient implements ClientModInitializer {
                 public LuaValue call() {
                     MinecraftClient.getInstance().close();
                     return NONE;
+                }
+            });
+            functions.set("AddChatListener", new OneArgFunction() {
+                @Override
+                public LuaValue call(LuaValue arg) {
+                    if (!conf.allowListenLinks) return NONE; // When disabled, the function won't be called
+                    LuaEvent event = new LuaEvent(arg.checkfunction());
+                    ServerMessageEvents.CHAT_MESSAGE.register((message, player, none) ->
+                            event.Call(valueOf(Objects.requireNonNull(message.getContent().getLiteralString())), valueOf(Objects.requireNonNull(player.getName().getLiteralString())))
+                    );
+                    return event.GetTable();
                 }
             });
             functions.set("AddClientLoadedListener", new OneArgFunction() {
@@ -699,6 +734,8 @@ public class MainClassClient implements ClientModInitializer {
     public void onInitializeClient() {
         LOGGER.info("SpongePowered LUAU Subsystem Version=0.8.7 Source=file:/home/user/net.fabricmc/sponge-mixin/0.15.3+mixin.0.8.7/51ee0a44ab05f6fddd66b09e66b3a16904f9c55d/sponge-mixin-0.15.3+mixin.0.8.7.jar Service=Knot/Fabric Env=CLIENT                       Just kidding obviously"); // Why not
         Instance = this;
+        if (IsRunningOnPojavLauncher())
+            LOGGER.warn("Detected we are running on PojavLauncher, this will slow down script execution!");
         File scriptsFolder = new File(FabricLoader.getInstance().getGameDir().toFile(), "lua");
         File config = new File(FabricLoader.getInstance().getConfigDir().toFile(), "lua_runtime_config.json");
         if (!config.exists()) {
@@ -708,7 +745,7 @@ public class MainClassClient implements ClientModInitializer {
                                 false,
                                 "$local"
                         )
-                }, true, false, true);
+                }, true, false, true, false);
                 FileWriter writer = createConfigFile(config);
                 writer.close();
             } catch (IOException e) {
@@ -725,7 +762,7 @@ public class MainClassClient implements ClientModInitializer {
                     JSONObject object = urls.getJSONObject(i);
                     urlConfigs.add(new Config.URLConfig(object.getBoolean("allow"), object.getString("url")));
                 }
-                conf = new Config(configJSON.getBoolean("allowCommands"), configJSON.getBoolean("allowChat"), toArray(urlConfigs, Config.URLConfig.class), configJSON.getBoolean("allowCopy"), configJSON.getBoolean("allowPaste"), configJSON.getBoolean("allowOpenLinks"));
+                conf = new Config(configJSON.getBoolean("allowCommands"), configJSON.getBoolean("allowChat"), toArray(urlConfigs, Config.URLConfig.class), configJSON.getBoolean("allowCopy"), configJSON.getBoolean("allowPaste"), configJSON.getBoolean("allowOpenLinks"), configJSON.getBoolean("allowListenChat"));
             } catch (Exception e) {
                 LOGGER.error("An error occurred trying to read the config file!");
                 throw new RuntimeException(e);
@@ -768,6 +805,7 @@ public class MainClassClient implements ClientModInitializer {
         configJSON.put("allowCopy", true);
         configJSON.put("allowPaste", false);
         configJSON.put("allowOpenLinks", true);
+        configJSON.put("allowListenChat", false);
         FileWriter writer = new FileWriter(config);
         writer.write(configJSON.toString(4));
         return writer;
