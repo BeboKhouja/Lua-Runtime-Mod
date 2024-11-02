@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -37,6 +38,11 @@ import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.*;
 import java.lang.reflect.Array;
 import java.net.*;
@@ -100,6 +106,35 @@ public class MainClassClient implements ClientModInitializer {
                 LuaValue table = getKeyTable();
                 functions.set("Keybinds", table);
             }
+            functions.set("Paste", new ZeroArgFunction() {
+                @Override
+                public LuaValue call() {
+                    if (!conf.allowPaste) throw new LuaError("Getting text from clipboard is not allowed by config");
+                    try {
+                        String data = (String) Toolkit.getDefaultToolkit()
+                                .getSystemClipboard().getData(DataFlavor.stringFlavor);
+                        return valueOf(data);
+                    } catch (UnsupportedFlavorException | IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
+            functions.set("Copy", new OneArgFunction() {
+                @Override
+                public LuaValue call(LuaValue arg) {
+                    if (!conf.allowCopy) throw new LuaError("Copying strings are not allowed by config");
+                    MinecraftClient.getInstance().keyboard.setClipboard(arg.toString());
+                    return NONE;
+                }
+            });
+            functions.set("OpenLink", new OneArgFunction() {
+                @Override
+                public LuaValue call(LuaValue arg) {
+                    if (!conf.allowOpenLinks) throw new LuaError("Opening links are not allowed by config");
+                    ConfirmLinkScreen.open(null, arg.toString());
+                    return NONE;
+                }
+            });
             LuaValue plrTable = tableOf();
             {
                 plrTable.set("GetPos", new VarArgFunction() {
@@ -224,6 +259,9 @@ public class MainClassClient implements ClientModInitializer {
                     blockedTables.set(i, blockUrlTable);
                 }
                 table.set("BlockedUrls" , blockedTables);
+                table.set("CopyEnabled", valueOf(conf.allowCopy));
+                table.set("PasteEnabled", valueOf(conf.allowPaste));
+                table.set("OpenLinkEnabled", valueOf(conf.allowOpenLinks));
                 functions.set("Config", table);
             }
             functions.set("RegisterKeybind", new TwoArgFunction() {
@@ -670,7 +708,7 @@ public class MainClassClient implements ClientModInitializer {
                                 false,
                                 "$local"
                         )
-                });
+                }, true, false, true);
                 FileWriter writer = createConfigFile(config);
                 writer.close();
             } catch (IOException e) {
@@ -687,7 +725,7 @@ public class MainClassClient implements ClientModInitializer {
                     JSONObject object = urls.getJSONObject(i);
                     urlConfigs.add(new Config.URLConfig(object.getBoolean("allow"), object.getString("url")));
                 }
-                conf = new Config(configJSON.getBoolean("allowCommands"), configJSON.getBoolean("allowChat"), toArray(urlConfigs, Config.URLConfig.class));
+                conf = new Config(configJSON.getBoolean("allowCommands"), configJSON.getBoolean("allowChat"), toArray(urlConfigs, Config.URLConfig.class), configJSON.getBoolean("allowCopy"), configJSON.getBoolean("allowPaste"), configJSON.getBoolean("allowOpenLinks"));
             } catch (Exception e) {
                 LOGGER.error("An error occurred trying to read the config file!");
                 throw new RuntimeException(e);
@@ -727,6 +765,9 @@ public class MainClassClient implements ClientModInitializer {
         local.put("allow", false);
         urls.put(local);
         configJSON.put("urls", urls);
+        configJSON.put("allowCopy", true);
+        configJSON.put("allowPaste", false);
+        configJSON.put("allowOpenLinks", true);
         FileWriter writer = new FileWriter(config);
         writer.write(configJSON.toString(4));
         return writer;
