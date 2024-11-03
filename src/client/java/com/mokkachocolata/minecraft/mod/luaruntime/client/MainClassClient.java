@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.gui.tooltip.Tooltip;
@@ -55,7 +56,6 @@ public class MainClassClient implements ClientModInitializer {
     public final ArrayList<LuaEvent> mainMenuListeners = new ArrayList<>();
     public static MainClassClient Instance;
     public MainClassClient.Minecraft LuaInstance;
-    public final ArrayList<LuaEvent> tickListener = new ArrayList<>();
     public ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee = new ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee();
     public Config conf;
 
@@ -121,8 +121,9 @@ public class MainClassClient implements ClientModInitializer {
                 }
             });
             functions.set("Platform", System.getProperty("os.name"));
-            functions.set("Version", "1.21.1");
-            functions.set("LuaRuntimeVersion", 0.3);
+            functions.set("Version", SharedConstants.getGameVersion().getName());
+            functions.set("Loader", "Fabric");
+            functions.set("LuaRuntimeVersion", 0.7);
             functions.set("ClientOrServer", "Client");
             {
                 LuaValue table = getKeyTable();
@@ -182,6 +183,13 @@ public class MainClassClient implements ClientModInitializer {
                                 LuaValue.valueOf(rotation.x),
                                 LuaValue.valueOf(rotation.y),
                         });
+                    }
+                });
+                plrTable.set("GetDimension", new ZeroArgFunction() {
+                    @Override
+                    public LuaValue call() {
+                        assert MinecraftClient.getInstance().world != null;
+                        return valueOf(MinecraftClient.getInstance().world.getDimensionEntry().getIdAsString());
                     }
                 });
             }
@@ -318,11 +326,11 @@ public class MainClassClient implements ClientModInitializer {
             functions.set("AddChatListener", new OneArgFunction() {
                 @Override
                 public LuaValue call(LuaValue arg) {
-                    if (!conf.allowListenLinks) return NONE; // When disabled, the function won't be called
                     LuaEvent event = new LuaEvent(arg.checkfunction());
-                    ServerMessageEvents.CHAT_MESSAGE.register((message, player, none) ->
-                            event.Call(valueOf(Objects.requireNonNull(message.getContent().getLiteralString())), valueOf(Objects.requireNonNull(player.getName().getLiteralString())))
-                    );
+                    if (conf.allowListenLinks) // When disabled, the function won't be called
+                        ServerMessageEvents.CHAT_MESSAGE.register((message, player, none) ->
+                               event.Call(valueOf(Objects.requireNonNull(message.getContent().getLiteralString())), valueOf(Objects.requireNonNull(player.getName().getLiteralString())))
+                        );
                     return event.GetTable();
                 }
             });
@@ -631,8 +639,8 @@ public class MainClassClient implements ClientModInitializer {
                 clientTicks.set("ForTicks", new OneArgFunction() {
                     @Override
                     public LuaValue call(LuaValue arg) {
-                        LuaEvent event = new LuaEvent(arg.checkfunction(/* nothing so far */));
-                        tickListener.add(event);
+                        LuaEvent event = new LuaEvent(arg.checkfunction());
+                        ClientTickEvents.START_CLIENT_TICK.register(client -> event.Call());
                         return event.GetTable();
                     }
                 });

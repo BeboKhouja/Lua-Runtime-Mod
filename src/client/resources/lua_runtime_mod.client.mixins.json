@@ -4,8 +4,7 @@
   "package": "com.mokkachocolata.minecraft.mod.luaruntime.client.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "MainMenuMixin",
-    "TickMixin"
+    "MainMenuMixin"
   ],
   "injectors": {
     "defaultRequire": 1
