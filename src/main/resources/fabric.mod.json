@@ -21,8 +21,8 @@
     "client": [
       "com.mokkachocolata.minecraft.mod.luaruntime.client.MainClassClient"
     ],
-    "main": [
-      "com.mokkachocolata.minecraft.mod.luaruntime.MainClass"
+    "server": [
+      "com.mokkachocolata.minecraft.mod.luaruntime.server.MainClassServer"
     ]
   },
   "mixins": [
@@ -30,11 +30,15 @@
     {
       "config": "lua_runtime_mod.client.mixins.json",
       "environment": "client"
+    },
+    {
+      "config": "lua_runtime_mod.mixins.server.json",
+      "environment": "server"
     }
   ],
   "depends": {
     "fabricloader": ">=${loader_version}",
-    "fabric": "*",
+    "fabric-api": ">=0.105.0+1.21.1",
     "java": ">=21",
     "minecraft": ">=${minecraft_version}"
   },

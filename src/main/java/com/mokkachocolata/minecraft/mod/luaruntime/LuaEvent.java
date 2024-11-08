@@ -1,4 +1,4 @@
-package com.mokkachocolata.minecraft.mod.luaruntime.client;
+package com.mokkachocolata.minecraft.mod.luaruntime;
 
 import org.luaj.vm2.LuaFunction;
 import org.luaj.vm2.LuaTable;

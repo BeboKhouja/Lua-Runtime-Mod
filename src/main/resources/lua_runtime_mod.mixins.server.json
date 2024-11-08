@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.mokkachocolata.minecraft.mod.luaruntime.server.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "server": [
+
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

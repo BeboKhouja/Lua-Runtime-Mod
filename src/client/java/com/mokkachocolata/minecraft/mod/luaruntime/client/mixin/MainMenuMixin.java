@@ -1,6 +1,6 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client.mixin;
 
-import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaEvent;
+import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.MainClassClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
@@ -20,7 +20,7 @@ public abstract class MainMenuMixin extends Screen {
 
     @Inject(at = @At("RETURN"), method = "initWidgetsNormal")
     private void versions(int y, int spacingY, CallbackInfo ci) {
-        this.addDrawableChild(new TextWidget(0, 0, 90, 10, Text.of("Lua Runtime v0.6"), textRenderer));
+        this.addDrawableChild(new TextWidget(0, 0, 90, 10, Text.of("Lua Runtime v0.8"), textRenderer));
         this.addDrawableChild(new TextWidget(0, 10, 120, 10, Text.of("Powered by LuaJ v3.0.1"), textRenderer));
         callScriptsMenuListeners();
     }

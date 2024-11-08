@@ -1,6 +1,7 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client;
 
 import com.mojang.brigadier.context.CommandContext;
+import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
 import com.mokkachocolata.minecraft.mod.luaruntime.ee;
 import com.yevdo.jwildcard.JWildcard;
 import net.fabricmc.api.ClientModInitializer;
@@ -58,12 +59,270 @@ public class MainClassClient implements ClientModInitializer {
     public MainClassClient.Minecraft LuaInstance;
     public ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee = new ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee();
     public Config conf;
+    private final ArrayList<LuaGUI> guis = new ArrayList<>();
 
     private <T> T[] toArray(Collection collection, Class<T> clazz) {
         T[] array = (T[]) Array.newInstance(clazz, collection.size());
         return ((Collection<T>) collection).toArray(array);
     }
 
+    private OneArgFunction newGUIInstance() {
+        return new OneArgFunction() {
+            @Override
+            public LuaValue call(LuaValue arg) {
+                LuaValue table = tableOf();
+                LuaGUI thisGui = new LuaGUI(Text.literal(arg.toString()));
+                LuaTable metaTable = tableOf();
+                guis.add(thisGui);
+                metaTable.set("__index", guis.size());
+                table.setmetatable(metaTable);
+                table.set("SetParent", new OneArgFunction() {
+                    @Override
+                    public LuaValue call(LuaValue arg) {
+                        if (!arg.istable() || arg.getmetatable().get("__index").isnil()) throw new LuaError("Not a GUI");
+                        thisGui.parent = guis.get(arg.getmetatable().get("__index").toint());
+                        return NONE;
+                    }
+                });
+                table.set("SetCancelable", new OneArgFunction() {
+                    @Override
+                    public LuaValue call(LuaValue arg) {
+                        thisGui.Cancelable = arg.checkboolean();
+                        return NONE;
+                    }
+                });
+                table.set("AddCloseListener", new OneArgFunction() {
+                    @Override
+                    public LuaValue call(LuaValue arg) {
+                        LuaEvent event = new LuaEvent(arg.checkfunction());
+                        thisGui.CloseCallback.add(event);
+                        return event.GetTable();
+                    }
+                });
+                table.set("Close", new ZeroArgFunction() {
+                    @Override
+                    public LuaValue call() {
+                        thisGui.close();
+                        return NONE;
+                    }
+                });
+                table.set("Display", new ZeroArgFunction() {
+                    @Override
+                    public LuaValue call() {
+                        MinecraftClient.getInstance().setScreen(thisGui);
+                        return NONE;
+                    }
+                });
+                table.set("NewButton", new TwoArgFunction() {
+                    @Override
+                    public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                        LuaValue table = tableOf();
+                        ButtonWidget.Builder button = thisGui.newButtonBuilder(Text.literal(arg1.toString()), arg2.checkfunction());
+                        table.set("SetTooltip", new OneArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg) {
+                                button.tooltip(Tooltip.of(Text.literal(arg.toString())));
+                                return NONE;
+                            }
+                        });
+                        table.set("SetPosition", new TwoArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                                button.position(arg1.toint(), arg2.toint());
+                                return NONE;
+                            }
+                        });
+                        table.set("SetSize", new TwoArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                                button.size(arg1.toint() / 2 - 205, arg2.toint());
+                                return NONE;
+                            }
+                        });
+                        table.set("AddDrawableChild", new ZeroArgFunction() {
+                            @Override
+                            public LuaValue call() {
+                                ButtonWidget builded = button.build();
+                                int index = thisGui.clickableWidgets.size();
+                                thisGui.addButtonDrawableChild(builded);
+                                LuaValue meta = tableOf();
+                                meta.set("Delete", new ZeroArgFunction() {
+                                    @Override
+                                    public LuaValue call() {
+                                        thisGui.clickableWidgets.remove(index);
+                                        return NONE;
+                                    }
+                                });
+                                meta.set("IsFocused", new ZeroArgFunction() {
+                                    @Override
+                                    public LuaValue call() {
+                                        return LuaValue.valueOf(builded.isFocused());
+                                    }
+                                });
+                                meta.set("SetText", new OneArgFunction() {
+                                    @Override
+                                    public LuaValue call(LuaValue arg) {
+                                        builded.setMessage(Text.literal(arg.toString()));
+                                        return NONE;
+                                    }
+                                });
+                                meta.set("SetTooltip", new OneArgFunction() {
+                                    @Override
+                                    public LuaValue call(LuaValue arg) {
+                                        builded.setTooltip(Tooltip.of(Text.literal(arg.toString())));
+                                        return NONE;
+                                    }
+                                });
+                                meta.set("SetPosition", new TwoArgFunction() {
+                                    @Override
+                                    public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                                        builded.setPosition(arg1.toint(), arg2.toint());
+                                        return NONE;
+                                    }
+                                });
+                                meta.set("SetSize", new TwoArgFunction() {
+                                    @Override
+                                    public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                                        builded.setDimensions(arg1.toint() / 2 - 205, arg2.toint());
+                                        return NONE;
+                                    }
+                                });
+                                return meta;
+                            }
+                        });
+                        return table;
+                    }
+                });
+                table.set("NewText", new OneArgFunction() {
+                    @Override
+                    public LuaValue call(LuaValue arg1) {
+                        LuaValue table = tableOf();
+                        TextWidget button = thisGui.newTextBuilder(Text.literal(arg1.toString()), MinecraftClient.getInstance().textRenderer);
+                        table.set("SetText", new OneArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg) {
+                                button.setMessage(Text.literal(arg.toString()));
+                                return NONE;
+                            }
+                        });
+                        table.set("SetPosition", new TwoArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                                button.setX(arg1.toint());
+                                button.setY(arg2.toint());
+                                return NONE;
+                            }
+                        });
+                        table.set("IsFocused", new ZeroArgFunction() {
+                            @Override
+                            public LuaValue call() {
+                                return LuaValue.valueOf(button.isFocused());
+                            }
+                        });
+                        table.set("SetSize", new TwoArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                                button.setWidth(arg1.toint() / 2 - 205);
+                                button.setHeight(arg2.toint());
+                                return NONE;
+                            }
+                        });
+                        table.set("AddDrawableChild", new ZeroArgFunction() {
+                            @Override
+                            public LuaValue call() {
+                                int index = thisGui.clickableWidgets.size();
+                                thisGui.addButtonDrawableChild(button);
+                                LuaValue meta = tableOf();
+                                meta.set("Delete", new ZeroArgFunction() {
+                                    @Override
+                                    public LuaValue call() {
+                                        thisGui.clickableWidgets.remove(index);
+                                        return NONE;
+                                    }
+                                });
+                                return meta;
+                            }
+                        });
+                        return table;
+                    }
+                });
+                table.set("NewTextField", new TwoArgFunction() {
+                    @Override
+                    public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                        LuaValue table = tableOf();
+                        TextFieldWidget button = thisGui.newTextFieldWidget(MinecraftClient.getInstance().textRenderer, arg1.checkint(), arg2.checkint(), Text.literal(""));
+                        table.set("SetPlaceholder", new OneArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg) {
+                                button.setPlaceholder(Text.literal(arg.toString()));
+                                return NONE;
+                            }
+                        });
+                        table.set("SetEditable", new OneArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg) {
+                                button.setEditable(arg.checkboolean());
+                                return NONE;
+                            }
+                        });
+                        table.set("SetVisible", new OneArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg) {
+                                button.setVisible(arg.checkboolean());
+                                return NONE;
+                            }
+                        });
+                        table.set("IsFocused", new ZeroArgFunction() {
+                            @Override
+                            public LuaValue call() {
+                                return LuaValue.valueOf(button.isFocused());
+                            }
+                        });
+                        table.set("SetPosition", new TwoArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                                button.setX(arg1.toint());
+                                button.setY(arg2.toint());
+                                return NONE;
+                            }
+                        });
+                        table.set("SetSize", new TwoArgFunction() {
+                            @Override
+                            public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                                button.setWidth(arg1.toint() / 2 - 205);
+                                button.setHeight(arg2.toint());
+                                return NONE;
+                            }
+                        });
+                        table.set("GetText", new ZeroArgFunction() {
+                            @Override
+                            public LuaValue call() {
+                                return LuaValue.valueOf(button.getText());
+                            }
+                        });
+                        table.set("AddDrawableChild", new ZeroArgFunction() {
+                            @Override
+                            public LuaValue call() {
+                                int index = thisGui.clickableWidgets.size();
+                                thisGui.addButtonDrawableChild(button);
+                                LuaValue meta = tableOf();
+                                meta.set("Delete", new ZeroArgFunction() {
+                                    @Override
+                                    public LuaValue call() {
+                                        thisGui.clickableWidgets.remove(index);
+                                        return NONE;
+                                    }
+                                });
+                                return meta;
+                            }
+                        });
+                        return table;
+                    }
+                });
+                return table;
+            }
+        };
+    }
     private boolean IsRunningOnPojavLauncher() {
         if (System.getenv("POJAV_RENDERER") != null) return true;
         String librarySearchPaths = System.getProperty("java.library.path", null);
@@ -105,7 +364,6 @@ public class MainClassClient implements ClientModInitializer {
         }
         @Override
         public LuaValue call(LuaValue arg1, LuaValue arg2) {
-            final ArrayList<LuaGUI> guis = new ArrayList<>();
             arg2.set("print", new OneArgFunction() {
                 @Override
                 public LuaValue call(LuaValue arg) {
@@ -123,7 +381,7 @@ public class MainClassClient implements ClientModInitializer {
             functions.set("Platform", System.getProperty("os.name"));
             functions.set("Version", SharedConstants.getGameVersion().getName());
             functions.set("Loader", "Fabric");
-            functions.set("LuaRuntimeVersion", 0.7);
+            functions.set("LuaRuntimeVersion", 0.8);
             functions.set("ClientOrServer", "Client");
             {
                 LuaValue table = getKeyTable();
@@ -150,11 +408,11 @@ public class MainClassClient implements ClientModInitializer {
                     return NONE;
                 }
             });
-            functions.set("OpenLink", new OneArgFunction() {
+            functions.set("OpenLink", new TwoArgFunction() {
                 @Override
-                public LuaValue call(LuaValue arg) {
+                public LuaValue call(LuaValue arg, LuaValue arg2) {
                     if (!conf.allowOpenLinks) throw new LuaError("Opening links are not allowed by config");
-                    ConfirmLinkScreen.open(null, arg.toString());
+                    ConfirmLinkScreen.open(arg2.isnil() ? null : guis.get(arg2.getmetatable().get("__index").checkint()), arg.toString());
                     return NONE;
                 }
             });
@@ -342,261 +600,7 @@ public class MainClassClient implements ClientModInitializer {
                     return event.GetTable();
                 }
             });
-            functions.set("CreateNewGUI", new OneArgFunction() {
-                @Override
-                public LuaValue call(LuaValue arg) {
-                    LuaValue table = tableOf();
-                    LuaGUI thisGui = new LuaGUI(Text.literal(arg.toString()));
-                    LuaTable metaTable = tableOf();
-                    guis.add(thisGui);
-                    metaTable.set("__index", guis.size());
-                    table.setmetatable(metaTable);
-                    table.set("SetParent", new OneArgFunction() {
-                        @Override
-                        public LuaValue call(LuaValue arg) {
-                            if (!arg.istable() || arg.getmetatable().get("__index").isnil()) throw new LuaError("Not a GUI");
-                            thisGui.parent = guis.get(arg.getmetatable().get("__index").toint());
-                            return NONE;
-                        }
-                    });
-                    table.set("SetCancelable", new OneArgFunction() {
-                        @Override
-                        public LuaValue call(LuaValue arg) {
-                            thisGui.Cancelable = arg.checkboolean();
-                            return NONE;
-                        }
-                    });
-                    table.set("AddCloseListener", new OneArgFunction() {
-                        @Override
-                        public LuaValue call(LuaValue arg) {
-                            LuaEvent event = new LuaEvent(arg.checkfunction());
-                            thisGui.CloseCallback.add(event);
-                            return event.GetTable();
-                        }
-                    });
-                    table.set("Close", new ZeroArgFunction() {
-                        @Override
-                        public LuaValue call() {
-                            thisGui.close();
-                            return NONE;
-                        }
-                    });
-                    table.set("Display", new ZeroArgFunction() {
-                        @Override
-                        public LuaValue call() {
-                            MinecraftClient.getInstance().setScreen(thisGui);
-                            return NONE;
-                        }
-                    });
-                    table.set("NewButton", new TwoArgFunction() {
-                        @Override
-                        public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                            LuaValue table = tableOf();
-                            ButtonWidget.Builder button = thisGui.newButtonBuilder(Text.literal(arg1.toString()), arg2.checkfunction());
-                            table.set("SetTooltip", new OneArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg) {
-                                    button.tooltip(Tooltip.of(Text.literal(arg.toString())));
-                                    return NONE;
-                                }
-                            });
-                            table.set("SetPosition", new TwoArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                                    button.position(arg1.toint(), arg2.toint());
-                                    return NONE;
-                                }
-                            });
-                            table.set("SetSize", new TwoArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                                    button.size(arg1.toint() / 2 - 205, arg2.toint());
-                                    return NONE;
-                                }
-                            });
-                            table.set("AddDrawableChild", new ZeroArgFunction() {
-                                @Override
-                                public LuaValue call() {
-                                    ButtonWidget builded = button.build();
-                                    int index = thisGui.clickableWidgets.size();
-                                    thisGui.addButtonDrawableChild(builded);
-                                    LuaValue meta = tableOf();
-                                    meta.set("Delete", new ZeroArgFunction() {
-                                        @Override
-                                        public LuaValue call() {
-                                            thisGui.clickableWidgets.remove(index);
-                                            return NONE;
-                                        }
-                                    });
-                                    meta.set("IsFocused", new ZeroArgFunction() {
-                                        @Override
-                                        public LuaValue call() {
-                                            return LuaValue.valueOf(builded.isFocused());
-                                        }
-                                    });
-                                    meta.set("SetText", new OneArgFunction() {
-                                        @Override
-                                        public LuaValue call(LuaValue arg) {
-                                            builded.setMessage(Text.literal(arg.toString()));
-                                            return NONE;
-                                        }
-                                    });
-                                    meta.set("SetTooltip", new OneArgFunction() {
-                                        @Override
-                                        public LuaValue call(LuaValue arg) {
-                                            builded.setTooltip(Tooltip.of(Text.literal(arg.toString())));
-                                            return NONE;
-                                        }
-                                    });
-                                    meta.set("SetPosition", new TwoArgFunction() {
-                                        @Override
-                                        public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                                            builded.setPosition(arg1.toint(), arg2.toint());
-                                            return NONE;
-                                        }
-                                    });
-                                    meta.set("SetSize", new TwoArgFunction() {
-                                        @Override
-                                        public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                                            builded.setDimensions(arg1.toint() / 2 - 205, arg2.toint());
-                                            return NONE;
-                                        }
-                                    });
-                                    return meta;
-                                }
-                            });
-                            return table;
-                        }
-                    });
-                    table.set("NewText", new OneArgFunction() {
-                        @Override
-                        public LuaValue call(LuaValue arg1) {
-                            LuaValue table = tableOf();
-                            TextWidget button = thisGui.newTextBuilder(Text.literal(arg1.toString()), MinecraftClient.getInstance().textRenderer);
-                            table.set("SetText", new OneArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg) {
-                                    button.setMessage(Text.literal(arg.toString()));
-                                    return NONE;
-                                }
-                            });
-                            table.set("SetPosition", new TwoArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                                    button.setX(arg1.toint());
-                                    button.setY(arg2.toint());
-                                    return NONE;
-                                }
-                            });
-                            table.set("IsFocused", new ZeroArgFunction() {
-                                @Override
-                                public LuaValue call() {
-                                    return LuaValue.valueOf(button.isFocused());
-                                }
-                            });
-                            table.set("SetSize", new TwoArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                                    button.setWidth(arg1.toint() / 2 - 205);
-                                    button.setHeight(arg2.toint());
-                                    return NONE;
-                                }
-                            });
-                            table.set("AddDrawableChild", new ZeroArgFunction() {
-                                @Override
-                                public LuaValue call() {
-                                    int index = thisGui.clickableWidgets.size();
-                                    thisGui.addButtonDrawableChild(button);
-                                    LuaValue meta = tableOf();
-                                    meta.set("Delete", new ZeroArgFunction() {
-                                        @Override
-                                        public LuaValue call() {
-                                            thisGui.clickableWidgets.remove(index);
-                                            return NONE;
-                                        }
-                                    });
-                                    return meta;
-                                }
-                            });
-                            return table;
-                        }
-                    });
-                    table.set("NewTextField", new TwoArgFunction() {
-                        @Override
-                        public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                            LuaValue table = tableOf();
-                            TextFieldWidget button = thisGui.newTextFieldWidget(MinecraftClient.getInstance().textRenderer, arg1.checkint(), arg2.checkint(), Text.literal(""));
-                            table.set("SetPlaceholder", new OneArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg) {
-                                    button.setPlaceholder(Text.literal(arg.toString()));
-                                    return NONE;
-                                }
-                            });
-                            table.set("SetEditable", new OneArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg) {
-                                    button.setEditable(arg.checkboolean());
-                                    return NONE;
-                                }
-                            });
-                            table.set("SetVisible", new OneArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg) {
-                                    button.setVisible(arg.checkboolean());
-                                    return NONE;
-                                }
-                            });
-                            table.set("IsFocused", new ZeroArgFunction() {
-                                @Override
-                                public LuaValue call() {
-                                    return LuaValue.valueOf(button.isFocused());
-                                }
-                            });
-                            table.set("SetPosition", new TwoArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                                    button.setX(arg1.toint());
-                                    button.setY(arg2.toint());
-                                    return NONE;
-                                }
-                            });
-                            table.set("SetSize", new TwoArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                                    button.setWidth(arg1.toint() / 2 - 205);
-                                    button.setHeight(arg2.toint());
-                                    return NONE;
-                                }
-                            });
-                            table.set("GetText", new ZeroArgFunction() {
-                                @Override
-                                public LuaValue call() {
-                                    return LuaValue.valueOf(button.getText());
-                                }
-                            });
-                            table.set("AddDrawableChild", new ZeroArgFunction() {
-                                @Override
-                                public LuaValue call() {
-                                    int index = thisGui.clickableWidgets.size();
-                                    thisGui.addButtonDrawableChild(button);
-                                    LuaValue meta = tableOf();
-                                    meta.set("Delete", new ZeroArgFunction() {
-                                        @Override
-                                        public LuaValue call() {
-                                            thisGui.clickableWidgets.remove(index);
-                                            return NONE;
-                                        }
-                                    });
-                                    return meta;
-                                }
-                            });
-                            return table;
-                        }
-                    });
-                    return table;
-                }
-            });
+            functions.set("CreateNewGUI", newGUIInstance());
             functions.set("RunCommand", new OneArgFunction() {
                 @Override
                 public LuaValue call(LuaValue arg) {
@@ -781,6 +785,7 @@ public class MainClassClient implements ClientModInitializer {
         g.set("luajava", LuaValue.NIL);
         LuaInstance = new Minecraft();
         g.load(LuaInstance);
+        new Thread(MinecraftClient.getInstance()::tick).start();
         for (File child : Objects.requireNonNull(scriptsFolder.listFiles())) {
             try {
                 if (FilenameUtils.getExtension(child.toPath().toString()).equals("lua")) {

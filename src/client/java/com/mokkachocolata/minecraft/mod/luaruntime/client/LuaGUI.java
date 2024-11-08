@@ -1,5 +1,6 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client;
 
+import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.font.TextRenderer;
