@@ -1,6 +1,7 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client;
 
 import com.mojang.brigadier.context.CommandContext;
+import com.mokkachocolata.minecraft.mod.luaruntime.Consts;
 import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
 import com.mokkachocolata.minecraft.mod.luaruntime.ee;
 import com.yevdo.jwildcard.JWildcard;
@@ -56,6 +57,7 @@ public class MainClassClient implements ClientModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("luaruntimemod");
     public final ArrayList<LuaEvent> mainMenuListeners = new ArrayList<>();
     public static MainClassClient Instance;
+    public static boolean loaded = false;
     public MainClassClient.Minecraft LuaInstance;
     public ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee = new ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee();
     public Config conf;
@@ -381,7 +383,7 @@ public class MainClassClient implements ClientModInitializer {
             functions.set("Platform", System.getProperty("os.name"));
             functions.set("Version", SharedConstants.getGameVersion().getName());
             functions.set("Loader", "Fabric");
-            functions.set("LuaRuntimeVersion", 0.8);
+            functions.set("LuaRuntimeVersion", Consts.Version);
             functions.set("ClientOrServer", "Client");
             {
                 LuaValue table = getKeyTable();
@@ -744,6 +746,7 @@ public class MainClassClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        System.setProperty("java.awt.headless", "false");
         LOGGER.info("SpongePowered LUAU Subsystem Version=0.8.7 Source=file:/home/user/net.fabricmc/sponge-mixin/0.15.3+mixin.0.8.7/51ee0a44ab05f6fddd66b09e66b3a16904f9c55d/sponge-mixin-0.15.3+mixin.0.8.7.jar Service=Knot/Fabric Env=CLIENT                       Just kidding obviously"); // Why not
         Instance = this;
         if (IsRunningOnPojavLauncher())
@@ -796,6 +799,8 @@ public class MainClassClient implements ClientModInitializer {
                     } catch (Exception e) {
                         LOGGER.error("An error occurred while executing {}!", child.getName());
                         LOGGER.error(e.getMessage());
+                        if (loaded)
+                            new ScriptError(e.getMessage()).Display();
                     }
                 }
             } catch (IOException e) {

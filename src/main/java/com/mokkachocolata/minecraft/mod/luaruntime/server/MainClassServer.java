@@ -1,5 +1,6 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.server;
 
+import com.mokkachocolata.minecraft.mod.luaruntime.Consts;
 import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
 import com.yevdo.jwildcard.JWildcard;
 import net.fabricmc.api.DedicatedServerModInitializer;
@@ -77,7 +78,7 @@ public class MainClassServer implements DedicatedServerModInitializer {
             functions.set("Platform", System.getProperty("os.name"));
             functions.set("Version", SharedConstants.getGameVersion().getName());
             functions.set("Loader", "Fabric");
-            functions.set("LuaRuntimeVersion", 0.8);
+            functions.set("LuaRuntimeVersion", Consts.Version);
             functions.set("ClientOrServer", "Server");
             {
                 LuaValue httpTable = tableOf();
