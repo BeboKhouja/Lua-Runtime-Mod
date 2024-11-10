@@ -4,6 +4,8 @@ import com.mokkachocolata.minecraft.mod.luaruntime.Consts;
 import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
 import com.yevdo.jwildcard.JWildcard;
 import net.fabricmc.api.DedicatedServerModInitializer;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.loader.api.FabricLoader;
@@ -28,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
 
+@Environment(EnvType.SERVER)
 public class LuaRuntimeServer implements DedicatedServerModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("luaruntimemod");
     public ConfigServer conf;

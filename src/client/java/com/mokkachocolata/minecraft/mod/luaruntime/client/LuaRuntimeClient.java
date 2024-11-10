@@ -106,7 +106,6 @@ public class LuaRuntimeClient implements ClientModInitializer {
         g.set("luajava", LuaValue.NIL);
         LuaInstance = new Minecraft(conf, LOGGER, guis, IsRunningOnPojavLauncher(), mainMenuListeners);
         g.load(LuaInstance);
-        new Thread(MinecraftClient.getInstance()::tick).start();
         for (File child : Objects.requireNonNull(scriptsFolder.listFiles())) {
             try {
                 if (FilenameUtils.getExtension(child.toPath().toString()).equals("lua")) {
