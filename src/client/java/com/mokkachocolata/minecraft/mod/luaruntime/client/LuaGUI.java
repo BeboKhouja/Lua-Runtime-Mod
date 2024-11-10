@@ -3,14 +3,9 @@ package com.mokkachocolata.minecraft.mod.luaruntime.client;
 import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.gui.widget.TextWidget;
 import net.minecraft.text.Text;
-import org.luaj.vm2.LuaFunction;
 
 import java.util.ArrayList;
 
@@ -25,21 +20,8 @@ public class LuaGUI extends Screen {
         super(title);
     }
 
-    public ButtonWidget.Builder newButtonBuilder(Text text, LuaFunction callback) {
-        return ButtonWidget.builder(text, p -> callback.call());
-    }
 
-    public TextWidget newTextBuilder(Text text, TextRenderer textRenderer) {
-        assert client != null;
-        return new TextWidget(text, textRenderer);
-    }
-
-    public TextFieldWidget newTextFieldWidget(TextRenderer textRenderer, int width, int height, Text text) {
-        assert client != null;
-        return new TextFieldWidget(textRenderer, width, height, text);
-    }
-
-    public void addButtonDrawableChild(ClickableWidget element) {
+    public void addClickableDrawableChild(ClickableWidget element) {
         clickableWidgets.add(element);
         init();
     }

@@ -28,10 +28,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
 
-public class MainClassServer implements DedicatedServerModInitializer {
+public class LuaRuntimeServer implements DedicatedServerModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("luaruntimemod");
     public ConfigServer conf;
-    public MainClassServer Instance;
+    public LuaRuntimeServer Instance;
     public Minecraft LuaInstance;
 
     private <T> T[] toArray(Collection collection, Class<T> clazz) {

@@ -14,15 +14,15 @@
     "sources": "https://github.com/BeboKhouja/Lua-Runtime-Mod",
     "homepage": "https://lua-runtime-docs.netlify.app"
   },
-  "license": "LGPL-3.0",
+  "license": "LGPL-3.0-or-later",
   "icon": "assets/lua_runtime_mod/icon.png",
   "environment": "*",
   "entrypoints": {
     "client": [
-      "com.mokkachocolata.minecraft.mod.luaruntime.client.MainClassClient"
+      "com.mokkachocolata.minecraft.mod.luaruntime.client.LuaRuntimeClient"
     ],
     "server": [
-      "com.mokkachocolata.minecraft.mod.luaruntime.server.MainClassServer"
+      "com.mokkachocolata.minecraft.mod.luaruntime.server.LuaRuntimeServer"
     ]
   },
   "mixins": [
