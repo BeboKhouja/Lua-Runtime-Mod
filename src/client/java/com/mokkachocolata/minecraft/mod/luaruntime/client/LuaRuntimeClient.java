@@ -33,7 +33,7 @@ public class LuaRuntimeClient implements ClientModInitializer {
     public Config conf;
     private final ArrayList<LuaGUI> guis = new ArrayList<>();
 
-    protected void ScriptError(Exception e) {
+    void ScriptError(Exception e) {
         LOGGER.error("An error occurred while executing a script!");
         LOGGER.error(e.getMessage());
         if (loaded)
