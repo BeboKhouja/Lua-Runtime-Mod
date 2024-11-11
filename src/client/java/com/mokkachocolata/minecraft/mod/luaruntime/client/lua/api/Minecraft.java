@@ -2,7 +2,7 @@ package com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.mokkachocolata.minecraft.mod.luaruntime.Consts;
-import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
+import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaEvent;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.Config;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaGUI;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api.gui.GUI;
@@ -20,6 +20,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -310,6 +311,15 @@ public class Minecraft extends TwoArgFunction {
                             event.Call(valueOf(Objects.requireNonNull(message.getContent().getLiteralString())), valueOf(Objects.requireNonNull(player.getName().getLiteralString())))
                     );
                 return event.GetTable();
+            }
+        });
+        functions.set("DisplayToast", new TwoArgFunction() {
+            @Override
+            public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                MinecraftClient.getInstance().getToastManager().add(
+                        SystemToast.create(MinecraftClient.getInstance(), SystemToast.Type.NARRATOR_TOGGLE, Text.of(arg1.toString()), Text.of(arg2.toString()))
+                );
+                return NONE;
             }
         });
         functions.set("AddClientLoadedListener", new OneArgFunction() {

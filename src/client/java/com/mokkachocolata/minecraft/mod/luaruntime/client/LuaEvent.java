@@ -1,4 +1,4 @@
-package com.mokkachocolata.minecraft.mod.luaruntime;
+package com.mokkachocolata.minecraft.mod.luaruntime.client;
 
 import org.luaj.vm2.LuaFunction;
 import org.luaj.vm2.LuaTable;
@@ -14,22 +14,52 @@ public class LuaEvent {
         this.func = func;
     }
 
+    private static void LoadFunc(LuaFunction func) {
+        try {
+            func.call();
+        } catch (Exception e) {
+            LuaRuntimeClient.Instance.ScriptError(e);
+        }
+    }
+    private static void LoadFunc(LuaFunction func, LuaValue arg1) {
+        try {
+            func.call(arg1);
+        } catch (Exception e) {
+            LuaRuntimeClient.Instance.ScriptError(e);
+        }
+    }
+
+    private static void LoadFunc(LuaFunction func, LuaValue arg1, LuaValue arg2) {
+        try {
+            func.call(arg1);
+        } catch (Exception e) {
+            LuaRuntimeClient.Instance.ScriptError(e);
+        }
+    }
+
+    private static void LoadFunc(LuaFunction func, LuaValue arg1, LuaValue arg2, LuaValue arg3) {
+        try {
+            func.call(arg1);
+        } catch (Exception e) {
+            LuaRuntimeClient.Instance.ScriptError(e);
+        }
+    }
 
     public void Call() {
         if (disconnected) return;
-        func.call();
+        LoadFunc(func);
     }
     public void Call(LuaValue arg1) {
         if (disconnected) return;
-        func.call(arg1);
+        LoadFunc(func, arg1);
     }
     public void Call(LuaValue arg1, LuaValue arg2) {
         if (disconnected) return;
-        func.call(arg1, arg2);
+        LoadFunc(func, arg1, arg2);
     }
     public void Call(LuaValue arg1, LuaValue arg2, LuaValue arg3) {
         if (disconnected) return;
-        func.call(arg1, arg2, arg3);
+        LoadFunc(func, arg1, arg2, arg3);
     }
 
     public LuaTable GetTable() {

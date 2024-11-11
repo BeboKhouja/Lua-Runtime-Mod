@@ -1,7 +1,7 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client.mixin;
 
 import com.mokkachocolata.minecraft.mod.luaruntime.Consts;
-import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
+import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaEvent;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaRuntimeClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;

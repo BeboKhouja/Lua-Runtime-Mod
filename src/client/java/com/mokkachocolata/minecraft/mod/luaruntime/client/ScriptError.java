@@ -20,21 +20,12 @@ public class ScriptError {
     public void Display() {
         awtFrame.setSize(640, 280);
         awtFrame.setLayout(new FlowLayout());
-        awtFrame.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                System.exit(-1);
-            }
-        });
         awtErrorTitle.setAlignment(Label.CENTER);
         awtFrame.add(awtErrorTitle);
         awtFrame.add(Box.createHorizontalStrut(10));
         awtFrame.add(cause);
         awtFrame.add(Box.createHorizontalStrut(20));
-        closeButton.addActionListener(e -> {
-            awtFrame.dispose();
-            System.exit(-1);
-        });
+        closeButton.addActionListener(e -> awtFrame.dispose());
         awtFrame.add(closeButton);
         awtFrame.setVisible(true);
     }

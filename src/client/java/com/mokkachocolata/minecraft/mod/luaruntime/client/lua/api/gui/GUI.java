@@ -1,6 +1,6 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api.gui;
 
-import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
+import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaEvent;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaGUI;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.tooltip.Tooltip;

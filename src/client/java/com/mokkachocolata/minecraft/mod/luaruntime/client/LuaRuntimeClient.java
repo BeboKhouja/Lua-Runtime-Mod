@@ -1,6 +1,5 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client;
 
-import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api.Minecraft;
 import com.mokkachocolata.minecraft.mod.luaruntime.ee;
 import net.fabricmc.api.ClientModInitializer;
@@ -34,6 +33,22 @@ public class LuaRuntimeClient implements ClientModInitializer {
     public Config conf;
     private final ArrayList<LuaGUI> guis = new ArrayList<>();
 
+    protected void ScriptError(Exception e) {
+        LOGGER.error("An error occurred while executing a script!");
+        LOGGER.error(e.getMessage());
+        if (loaded)
+            MinecraftClient.getInstance().setScreen(new ScriptErrorInGame(MinecraftClient.getInstance().textRenderer, e));
+        else
+            new ScriptError(e.getMessage()).Display();
+    }
+    private void ScriptError(Exception e, File child) {
+        LOGGER.error("An error occurred while executing {}!", child.getName());
+        LOGGER.error(e.getMessage());
+        if (loaded)
+            MinecraftClient.getInstance().setScreen(new ScriptErrorInGame(MinecraftClient.getInstance().textRenderer, e));
+        else
+            new ScriptError(e.getMessage()).Display();
+    }
     private <T> T[] toArray(Collection collection, Class<T> clazz) {
         T[] array = (T[]) Array.newInstance(clazz, collection.size());
         return ((Collection<T>) collection).toArray(array);
@@ -114,10 +129,7 @@ public class LuaRuntimeClient implements ClientModInitializer {
                     try {
                         g.load(contents).call();
                     } catch (Exception e) {
-                        LOGGER.error("An error occurred while executing {}!", child.getName());
-                        LOGGER.error(e.getMessage());
-                        if (loaded)
-                            new ScriptError(e.getMessage()).Display();
+                        ScriptError(e, child);
                     }
                 }
             } catch (IOException e) {
