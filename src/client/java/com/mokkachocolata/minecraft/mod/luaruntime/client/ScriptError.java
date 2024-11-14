@@ -4,8 +4,6 @@ import com.mokkachocolata.minecraft.mod.luaruntime.Consts;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 
 public class ScriptError {
     private final Frame awtFrame = new Frame("Lua Runtime " + Consts.Version);
