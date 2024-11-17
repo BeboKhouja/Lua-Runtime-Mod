@@ -22,6 +22,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.util.Window;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
@@ -48,8 +49,18 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
 
+/**
+ * The base Lua class for Lua Runtime.
+ *
+ * @author Mokka Chocolata
+ */
 public class Minecraft extends TwoArgFunction {
     private final LuaValue functions = tableOf();
+
+    /**
+     * Adds a {@link LuaValue} to the Minecraft class for scripts to use.
+     * @param value The {@link LuaValue} to add to the Minecraft class.
+     */
     public void AddToTable(LuaValue value) {
         functions.add(value);
     }
@@ -91,6 +102,43 @@ public class Minecraft extends TwoArgFunction {
                 return NONE;
             }
         });
+        functions.set("GetWindowScale", new VarArgFunction() {
+            @Override
+            public Varargs invoke(Varargs args) {
+                Window window = MinecraftClient.getInstance().getWindow();
+                return varargsOf(
+                        LuaValue.valueOf(window.getScaledWidth()),
+                        LuaValue.valueOf(window.getScaledHeight())
+                );
+            }
+        });
+        {
+            LuaValue config = tableOf();
+            config.set("GetFOV", new ZeroArgFunction() {
+                @Override
+                public LuaValue call() {
+                    return valueOf(MinecraftClient.getInstance().options.getFov().getValue());
+                }
+            });
+        }
+        /*functions.set("PixelRaycast", new ThreeArgFunction() {
+            @Override
+            public LuaValue call(LuaValue arg, LuaValue arg2, LuaValue arg3) {
+                double maxReach = arg3.checkdouble();
+                float tickDelta = 1.0F;
+                boolean includeFluids = true;
+                MinecraftClient client = MinecraftClient.getInstance();
+                Window window = client.getWindow();
+                int width = window.getScaledWidth();
+                int height = window.getScaledHeight();
+                assert client.cameraEntity != null;
+                Vec3d cameraDirection = client.cameraEntity.getRotationVec(tickDelta);
+                double fov = client.options.getFov().getValue();
+                double angleSize = fov/height;
+                Vector3f verticalRotationAxis = new Vector3f((Vector3fc) cameraDirection);
+                return NONE*//*value*//*;
+            }
+        });*/
         functions.set("Platform", System.getProperty("os.name"));
         functions.set("Version", SharedConstants.getGameVersion().getName());
         functions.set("Loader", "Fabric");
@@ -271,7 +319,7 @@ public class Minecraft extends TwoArgFunction {
             table.set("CopyEnabled", valueOf(conf.allowCopy));
             table.set("PasteEnabled", valueOf(conf.allowPaste));
             table.set("OpenLinkEnabled", valueOf(conf.allowOpenLinks));
-            table.set("ListenChatEnabled", valueOf(conf.allowListenLinks));
+            table.set("ListenChatEnabled", valueOf(conf.allowListenChat));
             table.set("IsPojavLauncher", valueOf(IsRunningOnPojavLauncher));
             functions.set("Config", table);
         }
@@ -306,7 +354,7 @@ public class Minecraft extends TwoArgFunction {
             @Override
             public LuaValue call(LuaValue arg) {
                 LuaEvent event = new LuaEvent(arg.checkfunction());
-                if (conf.allowListenLinks) // When disabled, the function won't be called
+                if (conf.allowListenChat) // When disabled, the function won't be called
                     ServerMessageEvents.CHAT_MESSAGE.register((message, player, none) ->
                             event.Call(valueOf(Objects.requireNonNull(message.getContent().getLiteralString())), valueOf(Objects.requireNonNull(player.getName().getLiteralString())))
                     );
@@ -370,22 +418,16 @@ public class Minecraft extends TwoArgFunction {
         LuaValue ticks = tableOf();
         {
             LuaValue clientTicks = tableOf();
-            clientTicks.set("ForTicks", new OneArgFunction() {
+            OneArgFunction tick = new OneArgFunction() {
                 @Override
                 public LuaValue call(LuaValue arg) {
                     LuaEvent event = new LuaEvent(arg.checkfunction());
                     ClientTickEvents.START_CLIENT_TICK.register(client -> event.Call());
                     return event.GetTable();
                 }
-            });
-            clientTicks.set("Start", new OneArgFunction() {
-                @Override
-                public LuaValue call(LuaValue arg) {
-                    LuaEvent event = new LuaEvent(arg.checkfunction());
-                    ClientTickEvents.START_CLIENT_TICK.register(client -> event.Call());
-                    return event.GetTable();
-                }
-            });
+            };
+            clientTicks.set("Tick", tick);
+            clientTicks.set("Start", tick);
             clientTicks.set("StartWorld", new OneArgFunction() {
                 @Override
                 public LuaValue call(LuaValue arg) {
@@ -420,7 +462,7 @@ public class Minecraft extends TwoArgFunction {
     private @NotNull LuaValue getKeyTable() {
         LuaValue table = tableOf();
         LuaValue keyTable = tableOf();
-        for (Property key : Keys.keys) keyTable.set(key.propertyName, key.propertyValue);
+        for (Property<Integer> key : Keys.keys) keyTable.set(key.propertyName, key.propertyValue);
         table.set("Key", keyTable);
         return table;
     }

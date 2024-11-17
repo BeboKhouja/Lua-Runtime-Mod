@@ -16,6 +16,7 @@ import org.luaj.vm2.*;
 import org.luaj.vm2.lib.jse.JsePlatform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spongepowered.asm.mixin.Unique;
 
 import java.io.*;
 import java.lang.reflect.Array;
@@ -27,7 +28,7 @@ public class LuaRuntimeClient implements ClientModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("luaruntimemod");
     public final ArrayList<LuaEvent> mainMenuListeners = new ArrayList<>();
     public static LuaRuntimeClient Instance;
-    public static boolean loaded = false;
+    @Unique public static boolean lua_runtime_mod$loaded = false;
     public Minecraft LuaInstance;
     public ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee = new ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee();
     public Config conf;
@@ -36,7 +37,7 @@ public class LuaRuntimeClient implements ClientModInitializer {
     void ScriptError(Exception e) {
         LOGGER.error("An error occurred while executing a script!");
         LOGGER.error(e.getMessage());
-        if (loaded)
+        if (lua_runtime_mod$loaded)
             MinecraftClient.getInstance().setScreen(new ScriptErrorInGame(MinecraftClient.getInstance().textRenderer, e));
         else
             new ScriptError(e.getMessage()).Display();
@@ -44,7 +45,7 @@ public class LuaRuntimeClient implements ClientModInitializer {
     private void ScriptError(Exception e, File child) {
         LOGGER.error("An error occurred while executing {}!", child.getName());
         LOGGER.error(e.getMessage());
-        if (loaded)
+        if (lua_runtime_mod$loaded)
             MinecraftClient.getInstance().setScreen(new ScriptErrorInGame(MinecraftClient.getInstance().textRenderer, e));
         else
             new ScriptError(e.getMessage()).Display();

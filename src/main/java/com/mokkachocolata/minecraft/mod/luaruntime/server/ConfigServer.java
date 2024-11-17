@@ -3,11 +3,10 @@ package com.mokkachocolata.minecraft.mod.luaruntime.server;
 
 public class ConfigServer {
     public URLConfig[] urls;
-    // This is mistakenly named
-    public boolean allowListenLinks;
-    public ConfigServer(URLConfig[] urls,  boolean allowListenLinks) {
+    public boolean allowListenChat;
+    public ConfigServer(URLConfig[] urls,  boolean allowListenChat) {
         this.urls = urls;
-        this.allowListenLinks = allowListenLinks;
+        this.allowListenChat = allowListenChat;
     }
     public static class URLConfig {
         public boolean allow;

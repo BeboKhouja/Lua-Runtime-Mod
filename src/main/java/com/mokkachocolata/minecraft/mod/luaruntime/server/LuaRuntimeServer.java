@@ -150,14 +150,14 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
                     blockedTables.set(i, blockUrlTable);
                 }
                 table.set("BlockedUrls", blockedTables);
-                table.set("ListenChatEnabled", valueOf(conf.allowListenLinks));
+                table.set("ListenChatEnabled", valueOf(conf.allowListenChat));
                 functions.set("Config", table);
             }
             functions.set("AddChatListener", new OneArgFunction() {
                 @Override
                 public LuaValue call(LuaValue arg) {
                     LuaEvent event = new LuaEvent(arg.checkfunction());
-                    if (conf.allowListenLinks) // When disabled, the function won't be called
+                    if (conf.allowListenChat) // When disabled, the function won't be called
                         ServerMessageEvents.CHAT_MESSAGE.register((message, player, none) ->
                                 event.Call(valueOf(Objects.requireNonNull(message.getContent().getLiteralString())), valueOf(Objects.requireNonNull(player.getName().getLiteralString())))
                         );
@@ -175,7 +175,7 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
                         return event.GetTable();
                     }
                 };
-                clientTicks.set("ForTicks", forTicks);
+                clientTicks.set("Tick", forTicks);
                 clientTicks.set("Start", forTicks);
                 clientTicks.set("StartWorld", new OneArgFunction() {
                     @Override

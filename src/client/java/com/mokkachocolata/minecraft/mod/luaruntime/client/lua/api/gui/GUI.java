@@ -17,6 +17,11 @@ import org.luaj.vm2.lib.ZeroArgFunction;
 
 import java.util.ArrayList;
 
+/**
+ * The wrapper to create a GUI in Lua.
+ *
+ * @author Mokka Chocolata
+ */
 public class GUI extends OneArgFunction {
     private final ArrayList<LuaGUI> guis;
 

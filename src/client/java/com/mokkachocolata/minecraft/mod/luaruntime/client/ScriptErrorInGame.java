@@ -7,6 +7,12 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.TextWidget;
 import net.minecraft.text.Text;
 
+/**
+ * A GUI designed for when a script error occurs.
+ *
+ * @author Mokka Chocolata
+ * @apiNote This is designed for when the game has started.
+ */
 public class ScriptErrorInGame extends Screen {
     private final TextRenderer renderer;
     private final Exception exception;

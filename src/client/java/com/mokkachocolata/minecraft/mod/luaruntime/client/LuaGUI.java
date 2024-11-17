@@ -8,6 +8,11 @@ import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 
+/**
+ * Creates a new GUI for use with Lua.
+ *
+ * @author Mokka Chocolata
+ */
 @Environment(EnvType.CLIENT)
 public class LuaGUI extends Screen {
     public Screen parent;

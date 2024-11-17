@@ -8,15 +8,15 @@ public class Config {
     public boolean allowCopy;
     public boolean allowPaste;
     public boolean allowOpenLinks;
-    public boolean allowListenLinks;
-    public Config(boolean allowCommands, boolean allowChat, Config.URLConfig[] urls, boolean allowCopy, boolean allowPaste, boolean allowOpenLinks, boolean allowListenLinks) {
+    public boolean allowListenChat;
+    public Config(boolean allowCommands, boolean allowChat, Config.URLConfig[] urls, boolean allowCopy, boolean allowPaste, boolean allowOpenLinks, boolean allowListenChat) {
         this.allowCommands = allowCommands;
         this.allowChat = allowChat;
         this.urls = urls;
         this.allowOpenLinks = allowOpenLinks;
         this.allowCopy = allowCopy;
         this.allowPaste = allowPaste;
-        this.allowListenLinks = allowListenLinks;
+        this.allowListenChat = allowListenChat;
     }
     public static class URLConfig {
         public boolean allow;

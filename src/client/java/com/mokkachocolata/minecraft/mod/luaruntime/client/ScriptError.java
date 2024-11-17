@@ -5,6 +5,12 @@ import com.mokkachocolata.minecraft.mod.luaruntime.Consts;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * A GUI designed for when a script error occurs.
+ *
+ * @author Mokka Chocolata
+ * @apiNote This is designed for when the game has not started yet.
+ */
 public class ScriptError {
     private final Frame awtFrame = new Frame("Lua Runtime " + Consts.Version);
     private final Label awtErrorTitle = new Label("A script error occurred during startup!");
@@ -15,6 +21,10 @@ public class ScriptError {
         causeTextArea.setEditable(false);
         this.cause = causeTextArea;
     }
+
+    /**
+     * Display this script error.
+     */
     public void Display() {
         awtFrame.setSize(640, 280);
         awtFrame.setLayout(new FlowLayout());
