@@ -7,6 +7,7 @@ import com.mokkachocolata.minecraft.mod.luaruntime.client.Config;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaGUI;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api.gui.GUI;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api.gui.Keys;
+import com.mokkachocolata.minecraft.mod.luaruntime.lua.api.Color3;
 import com.mokkachocolata.minecraft.mod.luaruntime.lua.api.Property;
 import com.yevdo.jwildcard.JWildcard;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -88,20 +89,16 @@ public class Minecraft extends TwoArgFunction {
     }
     @Override
     public LuaValue call(LuaValue arg1, LuaValue arg2) {
-        arg2.set("print", new OneArgFunction() {
-            @Override
-            public LuaValue call(LuaValue arg) {
-                LOGGER.info(arg.toString());
-                return NIL;
-            }
-        });
-        functions.set("Print", new OneArgFunction() {
+        OneArgFunction print = new OneArgFunction() {
             @Override
             public LuaValue call(LuaValue arg) {
                 LOGGER.info(arg.toString());
                 return NONE;
             }
-        });
+        };
+        arg2.set("print", print);
+        functions.set("Print", print);
+        arg2.set("Color3", Color3.getLuaTableStatic());
         functions.set("GetWindowScale", new VarArgFunction() {
             @Override
             public Varargs invoke(Varargs args) {

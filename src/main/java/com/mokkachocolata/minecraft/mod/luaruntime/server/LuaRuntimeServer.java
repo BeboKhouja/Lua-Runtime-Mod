@@ -2,6 +2,7 @@ package com.mokkachocolata.minecraft.mod.luaruntime.server;
 
 import com.mokkachocolata.minecraft.mod.luaruntime.Consts;
 import com.mokkachocolata.minecraft.mod.luaruntime.LuaEvent;
+import com.mokkachocolata.minecraft.mod.luaruntime.lua.api.Color3;
 import com.yevdo.jwildcard.JWildcard;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.EnvType;
@@ -78,6 +79,7 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
                     return NONE;
                 }
             });
+            arg2.set("Color3", Color3.getLuaTableStatic());
             functions.set("Platform", System.getProperty("os.name"));
             functions.set("Version", SharedConstants.getGameVersion().getName());
             functions.set("Loader", "Fabric");
