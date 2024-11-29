@@ -30,6 +30,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
+import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
@@ -109,6 +110,35 @@ public class Minecraft extends TwoArgFunction {
                 );
             }
         });
+        arg2.set("waitNB", new TwoArgFunction() {
+            @Override
+            public LuaValue call(LuaValue arg1, LuaValue arg2) {
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(arg2.checklong()); // This means the wait time can go up to 9,223,372,036,854,775,807, which is 12 centuries. You'd have died at this point the timer ends.
+                        arg1.checkfunction().call();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
+                return NONE;
+            }
+        });
+//        arg2.set("wait", new OneArgFunction() {
+//            @Override
+//            public LuaValue call(LuaValue arg) {
+//                g.yield(NONE);
+//                new Thread(() -> {
+//                    try {
+//                        Thread.sleep(arg.checklong());
+//                        g.running.resume(NONE);
+//                    } catch (InterruptedException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                }).start();
+//                return NONE;
+//            }
+//        });
         {
             LuaValue config = tableOf();
             config.set("GetFOV", new ZeroArgFunction() {
@@ -464,7 +494,7 @@ public class Minecraft extends TwoArgFunction {
         return table;
     }
 
-    public Minecraft(Config conf, Logger logger, ArrayList<LuaGUI> guis, boolean runningOnPojavLauncher, ArrayList<LuaEvent> mainMenuListeners) {
+    public Minecraft(Config conf, Logger logger, ArrayList<LuaGUI> guis, boolean runningOnPojavLauncher, ArrayList<LuaEvent> mainMenuListeners, Globals g) {
         this.conf = conf;
         this.LOGGER = logger;
         this.guis = guis;

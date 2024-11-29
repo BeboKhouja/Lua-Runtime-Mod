@@ -1,5 +1,7 @@
 package com.mokkachocolata.minecraft.mod.luaruntime;
 
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import org.luaj.vm2.LuaFunction;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
@@ -12,6 +14,7 @@ import static org.luaj.vm2.LuaValue.tableOf;
  *
  * @author Mokka Chocolata
  */
+@Environment(EnvType.SERVER)
 public class LuaEvent {
     private final LuaFunction func;
     private boolean disconnected = false;

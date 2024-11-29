@@ -120,8 +120,15 @@ public class LuaRuntimeClient implements ClientModInitializer {
         if (!scriptsFolder.exists()) scriptsFolder.mkdir();
         Globals g = JsePlatform.standardGlobals();
         g.set("luajava", LuaValue.NIL);
-        LuaInstance = new Minecraft(conf, LOGGER, guis, IsRunningOnPojavLauncher(), mainMenuListeners);
+        LuaInstance = new Minecraft(conf, LOGGER, guis, IsRunningOnPojavLauncher(), mainMenuListeners, g);
         g.load(LuaInstance);
+        LuaValue os = g.get("os");
+        os.set("execute", LuaValue.NIL);
+        os.set("getenv", LuaValue.NIL);
+        os.set("remove", LuaValue.NIL);
+        os.set("rename", LuaValue.NIL);
+        os.set("setlocale", LuaValue.NIL);
+        os.set("tmpname", LuaValue.NIL);
         for (File child : Objects.requireNonNull(scriptsFolder.listFiles())) {
             try {
                 if (FilenameUtils.getExtension(child.toPath().toString()).equals("lua")) {
