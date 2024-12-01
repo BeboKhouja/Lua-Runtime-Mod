@@ -42,7 +42,7 @@
     "java": ">=21",
     "minecraft": ">=${minecraft_version}"
   },
-  "breaks": {
+  "conflicts": {
     "optifabric": "*"
   },
   "custom": {
