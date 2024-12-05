@@ -21,15 +21,22 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.sound.Sound;
+import net.minecraft.client.sound.SoundInstance;
+import net.minecraft.client.sound.SoundManager;
+import net.minecraft.client.sound.WeightedSoundSet;
 import net.minecraft.client.toast.SystemToast;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.Window;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaValue;
@@ -110,7 +117,7 @@ public class Minecraft extends TwoArgFunction {
                 );
             }
         });
-        arg2.set("waitNB", new TwoArgFunction() {
+        arg2.set("waitAsync", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaValue arg1, LuaValue arg2) {
                 new Thread(() -> {
@@ -206,6 +213,7 @@ public class Minecraft extends TwoArgFunction {
         });
         LuaValue plrTable = tableOf();
         {
+            plrTable.set("Username", valueOf(MinecraftClient.getInstance().getSession().getUsername()));
             plrTable.set("GetPos", new VarArgFunction() {
                 @Override
                 public Varargs invoke(Varargs v) {
@@ -350,6 +358,82 @@ public class Minecraft extends TwoArgFunction {
             table.set("IsPojavLauncher", valueOf(IsRunningOnPojavLauncher));
             functions.set("Config", table);
         }
+        functions.set("PlaySound", new ThreeArgFunction() {
+            @Override
+            public LuaValue call(LuaValue arg, LuaValue volume, LuaValue pitch) {
+                if (pitch.isnil()) pitch = valueOf(0);
+                if (volume.isnil()) volume = valueOf(.5);
+                final LuaValue finalVolume = volume;
+                final LuaValue finalPitch = pitch;
+                MinecraftClient.getInstance().getSoundManager().play(new SoundInstance() {
+                    @Override
+                    public Identifier getId() {
+                        return Identifier.of(arg.toString());
+                    }
+
+                    @Override
+                    public @Nullable WeightedSoundSet getSoundSet(SoundManager soundManager) {
+                        return null;
+                    }
+
+                    @Override
+                    public Sound getSound() {
+                        return null;
+                    }
+
+                    @Override
+                    public SoundCategory getCategory() {
+                        return null;
+                    }
+
+                    @Override
+                    public boolean isRepeatable() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isRelative() {
+                        return false;
+                    }
+
+                    @Override
+                    public int getRepeatDelay() {
+                        return 0;
+                    }
+
+                    @Override
+                    public float getVolume() {
+                        return finalVolume.checknumber().tofloat();
+                    }
+
+                    @Override
+                    public float getPitch() {
+                        return finalPitch.checknumber().tofloat();
+                    }
+
+                    @Override
+                    public double getX() {
+                        return 0;
+                    }
+
+                    @Override
+                    public double getY() {
+                        return 0;
+                    }
+
+                    @Override
+                    public double getZ() {
+                        return 0;
+                    }
+
+                    @Override
+                    public AttenuationType getAttenuationType() {
+                        return null;
+                    }
+                });
+                return NONE;
+            }
+        });
         functions.set("RegisterKeybind", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaValue arg2, LuaValue arg3) {

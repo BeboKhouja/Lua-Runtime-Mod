@@ -1,3 +1,14 @@
+// Just to optimize, not obfuscate
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'net.sf.proguard:proguard-gradle:6.0.3'
+        classpath 'net.sf.proguard:proguard-base:6.0.3'
+    }
+}
+
 plugins {
     id 'fabric-loom' version '1.8-SNAPSHOT'
     id 'maven-publish'
@@ -45,6 +56,17 @@ dependencies {
     implementation 'org.json:json:20240303'
     include 'org.json:json:20240303'
 }
+
+//task("proguard", type: proguard.gradle.ProGuardTask) {
+//    group 'build'
+//    description 'Optimize this JAR to be small.'
+//    injars('build/libs/lua_runtime_mod-' + project.minecraft_version + ".jar")
+//    outjars("build/libs/lua_runtime_mod-" + project.minecraft_version + "-optimized.jar")
+//    keep "class *"
+//    adaptclasstrings ''
+//    keepattributes "Signature,InnerClasses,*Annotation*"
+//    keep allowObfuscation: false
+//}
 
 processResources {
     inputs.property "version", project.version

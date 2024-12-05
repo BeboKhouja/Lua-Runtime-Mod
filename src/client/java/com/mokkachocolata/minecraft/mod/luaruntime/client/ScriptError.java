@@ -16,6 +16,7 @@ public class ScriptError {
     private final Label awtErrorTitle = new Label("A script error occurred during startup!");
     private final TextArea cause;
     private final Button closeButton = new Button("Close");
+
     public ScriptError(String cause) {
         TextArea causeTextArea = new TextArea(cause);
         causeTextArea.setEditable(false);
