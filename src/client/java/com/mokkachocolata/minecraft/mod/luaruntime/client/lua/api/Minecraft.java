@@ -218,8 +218,8 @@ public class Minecraft extends TwoArgFunction {
                 @Override
                 public Varargs invoke(Varargs v) {
                     assert MinecraftClient.getInstance().player != null;
-                    final ServerCommandSource source = MinecraftClient.getInstance().player.getCommandSource();
-                    Vec3d position = source.getPosition();
+                    // Courtesy of a bug report
+                    Vec3d position = MinecraftClient.getInstance().player.getPos();
                     return varargsOf(new LuaValue[]{
                             LuaValue.valueOf(position.x),
                             LuaValue.valueOf(position.y),
@@ -231,8 +231,8 @@ public class Minecraft extends TwoArgFunction {
                 @Override
                 public Varargs invoke(Varargs v) {
                     assert MinecraftClient.getInstance().player != null;
-                    final ServerCommandSource source = MinecraftClient.getInstance().player.getCommandSource();
-                    Vec2f rotation = source.getRotation();
+                    ClientPlayerEntity player = MinecraftClient.getInstance().player;
+                    Vec2f rotation = new Vec2f(player.getPitch(), player.getYaw());
                     return varargsOf(new LuaValue[]{
                             LuaValue.valueOf(rotation.x),
                             LuaValue.valueOf(rotation.y),
@@ -503,11 +503,12 @@ public class Minecraft extends TwoArgFunction {
                 return NONE;
             }
         });
-        functions.set("SendMessage", new OneArgFunction() {
+        functions.set("SendMessage", new TwoArgFunction() {
             @Override
-            public LuaValue call(LuaValue arg) {
+            public LuaValue call(LuaValue arg, LuaValue arg2) {
                 assert MinecraftClient.getInstance().player != null;
-                MinecraftClient.getInstance().player.sendMessage(Text.literal(arg.toString()));
+                if (arg2.isnil()) arg2 = valueOf(false);
+                MinecraftClient.getInstance().player.sendMessage(Text.literal(arg.toString()), arg2.toboolean());
                 return NONE;
             }
         });
