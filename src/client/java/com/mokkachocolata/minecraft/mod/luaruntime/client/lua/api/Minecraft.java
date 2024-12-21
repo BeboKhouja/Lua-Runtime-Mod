@@ -1,5 +1,8 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api;
 
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.*;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mokkachocolata.minecraft.mod.luaruntime.Consts;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaEvent;
@@ -53,10 +56,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Objects;
-import java.util.StringJoiner;
+import java.util.*;
+
+import static com.mokkachocolata.minecraft.mod.luaruntime.Utils.toArray;
+
 
 /**
  * The base Lua class for Lua Runtime.
@@ -271,7 +274,7 @@ public class Minecraft extends TwoArgFunction {
                 @Override
                 public LuaValue call(LuaValue url, LuaValue args, LuaValue contentType) {
                     if (CheckIfURLisBlocked(url.toString())) throw new LuaError("URL blocked by config");
-                    java.util.Map<String, String> arguments = new java.util.HashMap<>();
+                    Map<String, String> arguments = new HashMap<>();
                     for (int i = 0; i < args.checktable().length(); i++) {
                         args.get(i).checktable();
                         arguments.put(args.get(i).get("name").toString(), args.get(i).get("value").toString());
@@ -305,36 +308,85 @@ public class Minecraft extends TwoArgFunction {
             });
             functions.set("Http", httpTable);
         }
-        functions.set("AddCommand", new TwoArgFunction() {
+        functions.set("AddCommand", new ThreeArgFunction() {
             @Override
-            public LuaValue call(LuaValue arg1, LuaValue arg2) {
+            public LuaValue call(LuaValue arg1, LuaValue arg2, LuaValue arg3) {
+                // Get around Java's stupid lambda non-final error
                 var obj = new Object() {
                     CommandContext<FabricClientCommandSource> Context;
                 };
-                ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(ClientCommandManager.literal(arg1.toString())
-                        .executes(context -> {
-                            obj.Context = context;
-                            LuaValue table = tableOf();
-                            table.set("SendFeedback", new OneArgFunction() {
-                                @Override
-                                public LuaValue call(LuaValue arg) {
-                                    obj.Context.getSource().sendFeedback(Text.literal(arg.toString()));
-                                    return NONE;
+                OneArgFunction sendFeedback = new OneArgFunction() {
+                    @Override
+                    public LuaValue call(LuaValue arg) {
+                        obj.Context.getSource().sendFeedback(Text.literal(arg.toString()));
+                        return NONE;
+                    }
+                };
+                ClientCommandRegistrationCallback.EVENT.register(
+                        (dispatcher, Nothing) -> {
+                            var commandManager = ClientCommandManager.literal(arg1.toString());
+                            // That was way difficult than we thought, took 3 hours to get this to work
+                            if (arg2.istable()) {
+                                HashMap<String, ArgumentType<?>> properties = new HashMap<>();
+                                ArrayList<RequiredArgumentBuilder<FabricClientCommandSource, ?>> list = new ArrayList<>();
+                                if (arg2.checktable().keyCount() == 0) throw new LuaError("Too few arguments");
+                                for (int i = 0; i < arg2.checktable().keyCount(); i++) {
+                                    String type = arg2.get(i).checktable().get("type").toString();
+                                    ArgumentType<?> argumentType = switch (type) {
+                                        case "string" -> StringArgumentType.string();
+                                        case "number" -> DoubleArgumentType.doubleArg();
+                                        case "boolean" -> BoolArgumentType.bool();
+                                        case "nil" -> throw new LuaError("Why would you give nil to an argument type?");
+                                        case "function" -> throw new LuaError("Why would you give a function to an argument type?");
+                                        case "table" -> throw new LuaError("Tables not supported as an argument");
+                                        default -> throw new LuaError("Unexpected type: " + type);
+                                    };
+                                    String name = arg2.get(i).checktable().get("name").toString();
+                                    list.add(ClientCommandManager.argument(name, argumentType));
+                                    properties.put(name, argumentType);
                                 }
-                            });
-                            arg2.checkfunction().call(table);
-                            return 1;
-                        })
-                ));
+                                list.getLast().executes(context -> {
+                                    LuaValue table = tableOf();
+                                    table.set("SendFeedback", sendFeedback);
+                                    ArrayList<LuaValue> values = new ArrayList<>();
+                                    values.add(table);
+                                    properties.forEach((k, v) ->
+                                            values.add(switch (v) {
+                                                        case BoolArgumentType ignored ->
+                                                                valueOf(BoolArgumentType.getBool(context, k));
+                                                        case StringArgumentType ignored ->
+                                                                valueOf(StringArgumentType.getString(context, k));
+                                                        case DoubleArgumentType ignored ->
+                                                                valueOf(DoubleArgumentType.getDouble(context, k));
+                                                        default -> NIL;
+                                                    }
+                                            ));
+                                    arg3.checkfunction().invoke(toArray(values, LuaValue.class));
+                                    return Command.SINGLE_SUCCESS;
+                                });
+                                for (int in = 0; in < list.size(); in++)
+                                    if (in != list.size() - 1)
+                                        list.get(in).then(list.get(in + 1));
+                                commandManager.then(list.getFirst());
+                            } else
+                                commandManager.executes(context -> {
+                                    obj.Context = context;
+                                    LuaValue table = tableOf();
+                                    table.set("SendFeedback", new OneArgFunction() {
+                                        @Override
+                                        public LuaValue call(LuaValue arg) {
+                                            obj.Context.getSource().sendFeedback(Text.literal(arg.toString()));
+                                            return NONE;
+                                        }
+                                    });
+                                    arg2.checkfunction().call(table);
+                                    return 1;
+                                });
+                            dispatcher.register(commandManager);
+                        });
                 {
                     LuaValue table = tableOf();
-                    table.set("SendFeedback", new OneArgFunction() {
-                        @Override
-                        public LuaValue call(LuaValue arg1) {
-                            obj.Context.getSource().sendFeedback(Text.literal(arg1.toString()));
-                            return NONE;
-                        }
-                    });
+                    table.set("SendFeedback", sendFeedback);
                     return table;
                 }
             }

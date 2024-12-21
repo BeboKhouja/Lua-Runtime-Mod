@@ -19,10 +19,12 @@ import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Unique;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.util.*;
 
+import static com.mokkachocolata.minecraft.mod.luaruntime.Utils.toArray;
+
+@SuppressWarnings("deprecation")
 @Environment(EnvType.CLIENT)
 public class LuaRuntimeClient implements ClientModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("luaruntimemod");
@@ -37,22 +39,22 @@ public class LuaRuntimeClient implements ClientModInitializer {
     void ScriptError(Exception e) {
         LOGGER.error("An error occurred while executing a script!");
         LOGGER.error(e.getMessage());
+        DisplayScriptError(e);
+    }
+    private void DisplayScriptError(Exception e) {
         if (lua_runtime_mod$loaded)
-            MinecraftClient.getInstance().setScreen(new ScriptErrorInGame(MinecraftClient.getInstance().textRenderer, e));
+            MinecraftClient.getInstance().execute(() ->
+                    MinecraftClient.getInstance().setScreen(
+                            new ScriptErrorInGame(MinecraftClient.getInstance().textRenderer, e)
+                    )
+            );
         else
             new ScriptError(e.getMessage()).Display();
     }
     private void ScriptError(Exception e, File child) {
         LOGGER.error("An error occurred while executing {}!", child.getName());
         LOGGER.error(e.getMessage());
-        if (lua_runtime_mod$loaded)
-            MinecraftClient.getInstance().setScreen(new ScriptErrorInGame(MinecraftClient.getInstance().textRenderer, e));
-        else
-            new ScriptError(e.getMessage()).Display();
-    }
-    private <T> T[] toArray(Collection collection, Class<T> clazz) {
-        T[] array = (T[]) Array.newInstance(clazz, collection.size());
-        return ((Collection<T>) collection).toArray(array);
+        DisplayScriptError(e);
     }
     private boolean IsRunningOnPojavLauncher() {
         if (System.getenv("POJAV_RENDERER") != null) return true;
@@ -118,10 +120,11 @@ public class LuaRuntimeClient implements ClientModInitializer {
             }
         }
         if (!scriptsFolder.exists()) scriptsFolder.mkdir();
-        Globals g = JsePlatform.standardGlobals();
+        Globals g = JsePlatform.debugGlobals();
         g.set("luajava", LuaValue.NIL);
         LuaInstance = new Minecraft(conf, LOGGER, guis, IsRunningOnPojavLauncher(), mainMenuListeners, g);
         g.load(LuaInstance);
+        g.set("module", LuaValue.NIL);
         LuaValue os = g.get("os");
         os.set("execute", LuaValue.NIL);
         os.set("getenv", LuaValue.NIL);
@@ -129,6 +132,27 @@ public class LuaRuntimeClient implements ClientModInitializer {
         os.set("rename", LuaValue.NIL);
         os.set("setlocale", LuaValue.NIL);
         os.set("tmpname", LuaValue.NIL);
+        g.set("io", LuaValue.NIL);
+        g.set("package", LuaValue.NIL);
+        g.set("dofile", LuaValue.NIL);
+        g.set("loadfile", LuaValue.NIL);
+        LuaValue debug = g.get("debug");
+        debug.set("gethook", LuaValue.NIL);
+        debug.set("getinfo", LuaValue.NIL);
+        debug.set("getlocal", LuaValue.NIL);
+        debug.set("getmetatable", LuaValue.NIL);
+        debug.set("getregistry", LuaValue.NIL);
+        debug.set("getupvalue", LuaValue.NIL);
+        debug.set("getuservalue", LuaValue.NIL);
+        debug.set("sethook", LuaValue.NIL);
+        debug.set("setinfo", LuaValue.NIL);
+        debug.set("setlocal", LuaValue.NIL);
+        debug.set("setmetatable", LuaValue.NIL);
+        debug.set("setregistry", LuaValue.NIL);
+        debug.set("setupvalue", LuaValue.NIL);
+        debug.set("setuservalue", LuaValue.NIL);
+        debug.set("upvalueid", LuaValue.NIL);
+        debug.set("upvaluejoin", LuaValue.NIL);
         for (File child : Objects.requireNonNull(scriptsFolder.listFiles())) {
             try {
                 if (FilenameUtils.getExtension(child.toPath().toString()).equals("lua")) {

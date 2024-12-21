@@ -12,7 +12,8 @@ public class Keys {
     /**
      * List of keys.
      */
-    public static Property<Integer>[] keys = new Property[] {
+    @SuppressWarnings("unchecked") // We don't care about removing the redundant suppression
+    public static Property[] keys = new Property[] {
             new Property<>("A", GLFW.GLFW_KEY_A),
             new Property<>("B", GLFW.GLFW_KEY_B),
             new Property<>("C", GLFW.GLFW_KEY_C),
