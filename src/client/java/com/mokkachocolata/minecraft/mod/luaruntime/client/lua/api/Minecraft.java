@@ -10,7 +10,6 @@ import com.mokkachocolata.minecraft.mod.luaruntime.client.Config;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaGUI;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api.gui.GUI;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api.gui.Keys;
-import com.mokkachocolata.minecraft.mod.luaruntime.lua.api.Color3;
 import com.mokkachocolata.minecraft.mod.luaruntime.lua.api.Property;
 import com.yevdo.jwildcard.JWildcard;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -40,10 +39,7 @@ import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.luaj.vm2.Globals;
-import org.luaj.vm2.LuaError;
-import org.luaj.vm2.LuaValue;
-import org.luaj.vm2.Varargs;
+import org.luaj.vm2.*;
 import org.luaj.vm2.lib.*;
 import org.slf4j.Logger;
 
@@ -98,18 +94,27 @@ public class Minecraft extends TwoArgFunction {
             else return JWildcard.matches("*" + urlConfig.url, url) && !urlConfig.allow;
         return false;
     }
+    private static String TryGetStringFromTable(LuaValue table) {
+        final String originalString = table.toString();
+        final LuaValue metatable = table.getmetatable();
+        if (metatable.isnil()) return originalString;
+        if (!metatable.get("__tostring").isfunction()) return originalString;
+        return metatable.get("__tostring").call(table).toString();
+    }
     @Override
     public LuaValue call(LuaValue arg1, LuaValue arg2) {
         OneArgFunction print = new OneArgFunction() {
             @Override
             public LuaValue call(LuaValue arg) {
-                LOGGER.info(arg.toString());
+                if (arg.istable())
+                    LOGGER.info(TryGetStringFromTable(arg));
+                else
+                    LOGGER.info(arg.toString());
                 return NONE;
             }
         };
         arg2.set("print", print);
         functions.set("Print", print);
-        arg2.set("Color3", Color3.getLuaTableStatic());
         functions.set("GetWindowScale", new VarArgFunction() {
             @Override
             public Varargs invoke(Varargs args) {
@@ -177,7 +182,7 @@ public class Minecraft extends TwoArgFunction {
             }
         });*/
         functions.set("Platform", System.getProperty("os.name"));
-        functions.set("Version", SharedConstants.getGameVersion().getName());
+        functions.set("Version", SharedConstants.getGameVersion().name());
         functions.set("Loader", "Fabric");
         functions.set("LuaRuntimeVersion", Consts.Version);
         functions.set("ClientOrServer", "Client");

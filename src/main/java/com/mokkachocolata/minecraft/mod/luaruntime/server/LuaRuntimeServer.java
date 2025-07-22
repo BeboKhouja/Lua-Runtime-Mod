@@ -79,9 +79,8 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
                     return NONE;
                 }
             });
-            arg2.set("Color3", Color3.getLuaTableStatic());
             functions.set("Platform", System.getProperty("os.name"));
-            functions.set("Version", SharedConstants.getGameVersion().getName());
+            functions.set("Version", SharedConstants.getGameVersion().name());
             functions.set("Loader", "Fabric");
             functions.set("LuaRuntimeVersion", Consts.Version);
             functions.set("ClientOrServer", "Server");

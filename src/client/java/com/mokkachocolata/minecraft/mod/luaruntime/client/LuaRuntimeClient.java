@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Unique;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
 
@@ -140,19 +141,22 @@ public class LuaRuntimeClient implements ClientModInitializer {
         debug.set("gethook", LuaValue.NIL);
         debug.set("getinfo", LuaValue.NIL);
         debug.set("getlocal", LuaValue.NIL);
-        debug.set("getmetatable", LuaValue.NIL);
         debug.set("getregistry", LuaValue.NIL);
         debug.set("getupvalue", LuaValue.NIL);
         debug.set("getuservalue", LuaValue.NIL);
         debug.set("sethook", LuaValue.NIL);
         debug.set("setinfo", LuaValue.NIL);
         debug.set("setlocal", LuaValue.NIL);
-        debug.set("setmetatable", LuaValue.NIL);
         debug.set("setregistry", LuaValue.NIL);
         debug.set("setupvalue", LuaValue.NIL);
         debug.set("setuservalue", LuaValue.NIL);
         debug.set("upvalueid", LuaValue.NIL);
         debug.set("upvaluejoin", LuaValue.NIL);
+        g.load(new Scanner(
+                        LuaRuntimeClient.class.getResourceAsStream(
+                                "/assets/lua_runtime_mod/Minecraft.lua"),
+                                StandardCharsets.UTF_8
+                ).useDelimiter("\\A").next()).call();
         for (File child : Objects.requireNonNull(scriptsFolder.listFiles())) {
             try {
                 if (FilenameUtils.getExtension(child.toPath().toString()).equals("lua")) {
