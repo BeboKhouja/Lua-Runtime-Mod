@@ -43,10 +43,10 @@ function Color3.new(r, g, b, a)
         __mul = function(l, r)
             -- Dont worry: one of the arguments is a color3
             if type(l) == "number" then
-                l = Color3.new(r, r, r)
+                l = Color3.new(r, r, r, r)
             end
             if type(r) == "number" then
-                r = Color3.new(r, r, r)
+                r = Color3.new(r, r, r, r)
             end
             return Color3.new(l.R * r.R, l.G * r.G, l.B * r.B, l.A * r.A)
         end,
