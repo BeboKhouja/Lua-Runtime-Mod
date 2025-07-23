@@ -221,39 +221,54 @@ public class Minecraft extends TwoArgFunction {
         });
         LuaValue plrTable = tableOf();
         {
+            LuaValue plrMetaTable = tableOf();
+            plrMetaTable.set("__index", new VarArgFunction() {
+                @Override
+                public Varargs invoke(Varargs v) {
+                    final MinecraftClient mcInstance = MinecraftClient.getInstance();
+                    final String index = v.arg(2).checkstring().toString();
+                    assert mcInstance.player != null;
+                    switch (index) {
+                        case "IsPlaying":
+                            return varargsOf(new LuaValue[]{LuaValue.valueOf(mcInstance.isConnectedToLocalServer())});
+                        case "Position":
+                            // Courtesy of a bug report
+                            Vec3d position = mcInstance.player.getPos();
+                            return varargsOf(new LuaValue[]{
+                                    LuaValue.valueOf(position.x),
+                                    LuaValue.valueOf(position.y),
+                                    LuaValue.valueOf(position.z),
+                            });
+                        case "Rotation":
+                            ClientPlayerEntity player = mcInstance.player;
+                            Vec2f rotation = new Vec2f(player.getPitch(), player.getYaw());
+                            return varargsOf(new LuaValue[]{
+                                    LuaValue.valueOf(rotation.x),
+                                    LuaValue.valueOf(rotation.y),
+                            });
+                        case "Dimension":
+                            return valueOf(mcInstance.world.getDimensionEntry().getIdAsString());
+                        default:
+                            return NIL;
+                    }
+                }
+            });
+            plrMetaTable.set("__newindex", new ThreeArgFunction() {
+                @Override
+                public LuaValue call(LuaValue table, LuaValue index, LuaValue value) {
+                    switch (index.checkstring().toString()) {
+                        case "Position":
+                            throw new LuaError("Position is read-only.");
+                        case "Rotation":
+                            throw new LuaError("Rotation is read-only.");
+                        case "Dimension":
+                            throw new LuaError("Dimension is read-only.");
+                    }
+                    return NIL;
+                }
+            });
+            plrTable.setmetatable(plrMetaTable);
             plrTable.set("Username", valueOf(MinecraftClient.getInstance().getSession().getUsername()));
-            plrTable.set("GetPos", new VarArgFunction() {
-                @Override
-                public Varargs invoke(Varargs v) {
-                    assert MinecraftClient.getInstance().player != null;
-                    // Courtesy of a bug report
-                    Vec3d position = MinecraftClient.getInstance().player.getPos();
-                    return varargsOf(new LuaValue[]{
-                            LuaValue.valueOf(position.x),
-                            LuaValue.valueOf(position.y),
-                            LuaValue.valueOf(position.z),
-                    });
-                }
-            });
-            plrTable.set("GetRot", new VarArgFunction() {
-                @Override
-                public Varargs invoke(Varargs v) {
-                    assert MinecraftClient.getInstance().player != null;
-                    ClientPlayerEntity player = MinecraftClient.getInstance().player;
-                    Vec2f rotation = new Vec2f(player.getPitch(), player.getYaw());
-                    return varargsOf(new LuaValue[]{
-                            LuaValue.valueOf(rotation.x),
-                            LuaValue.valueOf(rotation.y),
-                    });
-                }
-            });
-            plrTable.set("GetDimension", new ZeroArgFunction() {
-                @Override
-                public LuaValue call() {
-                    assert MinecraftClient.getInstance().world != null;
-                    return valueOf(MinecraftClient.getInstance().world.getDimensionEntry().getIdAsString());
-                }
-            });
         }
         functions.set("Player", plrTable);
         {
