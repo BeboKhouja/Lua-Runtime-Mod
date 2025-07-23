@@ -17,7 +17,7 @@ function Color3.new(r, g, b, a)
             table.A = tonumber(r:sub(7), 16)
             table.B = tonumber(r:sub(5, 6), 16)
         else
-            table.A = 0
+            table.A = 1
             table.B = tonumber(r:sub(5), 16)
         end
         table.G = tonumber(r:sub(3, 4), 16)
@@ -26,7 +26,7 @@ function Color3.new(r, g, b, a)
         if a ~= nil then
             table.A = a
         else
-            table.A = 0
+            table.A = 1
         end
         table.B = b
         table.G = g
@@ -56,9 +56,6 @@ function Color3.new(r, g, b, a)
             end
             return Color3.new(l.R / r.R, l.G / r.G, l.B / r.B, l.A / r.A)
         end,
-        __unm = function(color)
-            return Color3.new(-color.R, -color.G, -color.B, -color.A)
-        end,
         __tostring = function(color)
             return color.R..", "..color.G..", "..color.B..", "..color.A
         end
@@ -67,8 +64,16 @@ function Color3.new(r, g, b, a)
     return table
 end
 
-Color3.Red = Color3.new(255, 0, 0)
-Color3.Green = Color3.new(0, 255, 0)
-Color3.Blue = Color3.new(0, 0, 255)
-Color3.White = Color3.new(255, 255, 255)
+function Color3.fromRGBA(r, g, b, a)
+    return Color3.new(r / 255, g / 255, b / 255, a  / 255)
+end
+
+function Color3.fromRGB(r, g, b)
+    return Color3.new(r / 255, g / 255, b / 255)
+end
+
+Color3.Red = Color3.new(1, 0, 0)
+Color3.Green = Color3.new(0, 1, 0)
+Color3.Blue = Color3.new(0, 0, 1)
+Color3.White = Color3.new(1, 1, 1)
 Color3.Black = Color3.new(0, 0, 0)
