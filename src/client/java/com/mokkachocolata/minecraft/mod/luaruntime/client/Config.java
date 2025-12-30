@@ -9,7 +9,19 @@ public class Config {
     public boolean allowPaste;
     public boolean allowOpenLinks;
     public boolean allowListenChat;
-    public Config(boolean allowCommands, boolean allowChat, Config.URLConfig[] urls, boolean allowCopy, boolean allowPaste, boolean allowOpenLinks, boolean allowListenChat) {
+    public boolean allowLuaJavaLibrary;
+    public boolean allowAllDefFunctions;
+    public Config(
+            boolean allowCommands,
+            boolean allowChat,
+            Config.URLConfig[] urls,
+            boolean allowCopy,
+            boolean allowPaste,
+            boolean allowOpenLinks,
+            boolean allowListenChat,
+            boolean allowLuaJavaLibrary,
+            boolean allowAllDefFunctions
+    ) {
         this.allowCommands = allowCommands;
         this.allowChat = allowChat;
         this.urls = urls;
@@ -17,6 +29,8 @@ public class Config {
         this.allowCopy = allowCopy;
         this.allowPaste = allowPaste;
         this.allowListenChat = allowListenChat;
+        this.allowLuaJavaLibrary = allowLuaJavaLibrary;
+        this.allowAllDefFunctions = allowAllDefFunctions;
     }
     public static class URLConfig {
         public boolean allow;

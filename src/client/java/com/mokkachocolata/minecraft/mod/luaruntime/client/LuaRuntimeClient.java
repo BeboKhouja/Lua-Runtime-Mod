@@ -57,37 +57,15 @@ public class LuaRuntimeClient implements ClientModInitializer {
         LOGGER.error(e.getMessage());
         DisplayScriptError(e);
     }
-    private boolean IsRunningOnPojavLauncher() {
-        if (System.getenv("POJAV_RENDERER") != null) return true;
-        String librarySearchPaths = System.getProperty("java.library.path", null);
-
-        if (librarySearchPaths != null)
-            for (var path: librarySearchPaths.split(":"))
-                if (isKnownAndroidPathFragment(path)) {
-                    LOGGER.warn("Found a library search path which seems like its hosted on an Android filesystem (It's actually ext4): {}", path);
-                    return true;
-                }
-
-        String workingDirectory = System.getProperty("user.home", null);
-
-        if (workingDirectory != null && isKnownAndroidPathFragment(workingDirectory))
-            LOGGER.warn("It looks like the working directory is in an Android filesystem (cant repeat to say that again): {}", workingDirectory);
-
-        return false;
-    }
 
     private boolean isKnownAndroidPathFragment(String path) {
         return path.matches("/data/user/[0-9]+/net\\.kdt\\.pojavlaunch");
     }
 
-
     @Override
     public void onInitializeClient() {
         System.setProperty("java.awt.headless", "false");
-        LOGGER.info("SpongePowered LUAU Subsystem Version=0.8.7 Source=file:/home/user/net.fabricmc/sponge-mixin/0.15.3+mixin.0.8.7/51ee0a44ab05f6fddd66b09e66b3a16904f9c55d/sponge-mixin-0.15.3+mixin.0.8.7.jar Service=Knot/Fabric Env=CLIENT                       Just kidding obviously"); // Why not
         Instance = this;
-        if (IsRunningOnPojavLauncher())
-            LOGGER.warn("Detected we are running on PojavLauncher, this will slow down script execution!");
         File scriptsFolder = new File(FabricLoader.getInstance().getGameDir().toFile(), "lua");
         File config = new File(FabricLoader.getInstance().getConfigDir().toFile(), "lua_runtime_config.json");
         if (!config.exists()) {
@@ -97,7 +75,7 @@ public class LuaRuntimeClient implements ClientModInitializer {
                                 false,
                                 "$local"
                         )
-                }, true, false, true, false);
+                }, true, false, true, false, false, false);
                 FileWriter writer = createConfigFile(config);
                 writer.close();
             } catch (IOException e) {
@@ -114,7 +92,17 @@ public class LuaRuntimeClient implements ClientModInitializer {
                     JSONObject object = urls.getJSONObject(i);
                     urlConfigs.add(new Config.URLConfig(object.getBoolean("allow"), object.getString("url")));
                 }
-                conf = new Config(configJSON.getBoolean("allowCommands"), configJSON.getBoolean("allowChat"), toArray(urlConfigs, Config.URLConfig.class), configJSON.getBoolean("allowCopy"), configJSON.getBoolean("allowPaste"), configJSON.getBoolean("allowOpenLinks"), configJSON.getBoolean("allowListenChat"));
+                conf = new Config(
+                        configJSON.getBoolean("allowCommands"),
+                        configJSON.getBoolean("allowChat"),
+                        toArray(urlConfigs, Config.URLConfig.class),
+                        configJSON.getBoolean("allowCopy"),
+                        configJSON.getBoolean("allowPaste"),
+                        configJSON.getBoolean("allowOpenLinks"),
+                        configJSON.getBoolean("allowListenChat"),
+                        configJSON.optBoolean("allowLuaJavaLibrary", false),
+                        configJSON.optBoolean("allowAllDefFunctions", false)
+                );
             } catch (Exception e) {
                 LOGGER.error("An error occurred trying to read the config file!");
                 throw new RuntimeException(e);
@@ -122,36 +110,38 @@ public class LuaRuntimeClient implements ClientModInitializer {
         }
         if (!scriptsFolder.exists()) scriptsFolder.mkdir();
         Globals g = JsePlatform.debugGlobals();
-        g.set("luajava", LuaValue.NIL);
-        LuaInstance = new Minecraft(conf, LOGGER, guis, IsRunningOnPojavLauncher(), mainMenuListeners, g);
+        if (!(conf.allowLuaJavaLibrary)) g.set("luajava", LuaValue.NIL);
+        LuaInstance = new Minecraft(conf, LOGGER, guis, mainMenuListeners, g);
         g.load(LuaInstance);
-        g.set("module", LuaValue.NIL);
-        LuaValue os = g.get("os");
-        os.set("execute", LuaValue.NIL);
-        os.set("getenv", LuaValue.NIL);
-        os.set("remove", LuaValue.NIL);
-        os.set("rename", LuaValue.NIL);
-        os.set("setlocale", LuaValue.NIL);
-        os.set("tmpname", LuaValue.NIL);
-        g.set("io", LuaValue.NIL);
-        g.set("package", LuaValue.NIL);
-        g.set("dofile", LuaValue.NIL);
-        g.set("loadfile", LuaValue.NIL);
-        LuaValue debug = g.get("debug");
-        debug.set("gethook", LuaValue.NIL);
-        debug.set("getinfo", LuaValue.NIL);
-        debug.set("getlocal", LuaValue.NIL);
-        debug.set("getregistry", LuaValue.NIL);
-        debug.set("getupvalue", LuaValue.NIL);
-        debug.set("getuservalue", LuaValue.NIL);
-        debug.set("sethook", LuaValue.NIL);
-        debug.set("setinfo", LuaValue.NIL);
-        debug.set("setlocal", LuaValue.NIL);
-        debug.set("setregistry", LuaValue.NIL);
-        debug.set("setupvalue", LuaValue.NIL);
-        debug.set("setuservalue", LuaValue.NIL);
-        debug.set("upvalueid", LuaValue.NIL);
-        debug.set("upvaluejoin", LuaValue.NIL);
+        if (!(conf.allowAllDefFunctions)) {
+            g.set("module", LuaValue.NIL);
+            LuaValue os = g.get("os");
+            os.set("execute", LuaValue.NIL);
+            os.set("getenv", LuaValue.NIL);
+            os.set("remove", LuaValue.NIL);
+            os.set("rename", LuaValue.NIL);
+            os.set("setlocale", LuaValue.NIL);
+            os.set("tmpname", LuaValue.NIL);
+            g.set("io", LuaValue.NIL);
+            g.set("package", LuaValue.NIL);
+            g.set("dofile", LuaValue.NIL);
+            g.set("loadfile", LuaValue.NIL);
+            LuaValue debug = g.get("debug");
+            debug.set("gethook", LuaValue.NIL);
+            debug.set("getinfo", LuaValue.NIL);
+            debug.set("getlocal", LuaValue.NIL);
+            debug.set("getregistry", LuaValue.NIL);
+            debug.set("getupvalue", LuaValue.NIL);
+            debug.set("getuservalue", LuaValue.NIL);
+            debug.set("sethook", LuaValue.NIL);
+            debug.set("setinfo", LuaValue.NIL);
+            debug.set("setlocal", LuaValue.NIL);
+            debug.set("setregistry", LuaValue.NIL);
+            debug.set("setupvalue", LuaValue.NIL);
+            debug.set("setuservalue", LuaValue.NIL);
+            debug.set("upvalueid", LuaValue.NIL);
+            debug.set("upvaluejoin", LuaValue.NIL);
+        }
         g.load(new Scanner(
                         LuaRuntimeClient.class.getResourceAsStream(
                                 "/assets/lua_runtime_mod/Minecraft.lua"),
@@ -189,6 +179,8 @@ public class LuaRuntimeClient implements ClientModInitializer {
         configJSON.put("allowPaste", false);
         configJSON.put("allowOpenLinks", true);
         configJSON.put("allowListenChat", false);
+        configJSON.put("allowLuaJavaLibrary", false);
+        configJSON.put("allowAllDefFunctions", false);
         FileWriter writer = new FileWriter(config);
         writer.write(configJSON.toString(4));
         return writer;

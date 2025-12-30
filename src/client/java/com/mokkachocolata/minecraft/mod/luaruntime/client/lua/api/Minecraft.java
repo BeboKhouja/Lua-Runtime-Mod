@@ -75,7 +75,6 @@ public class Minecraft extends TwoArgFunction {
     private final Logger LOGGER;
     private final ArrayList<LuaGUI> guis;
     private final Config conf;
-    private final boolean IsRunningOnPojavLauncher;
 
     public ArrayList<LuaEvent> getMainMenuListeners() {
         return mainMenuListeners;
@@ -427,7 +426,6 @@ public class Minecraft extends TwoArgFunction {
             table.set("PasteEnabled", valueOf(conf.allowPaste));
             table.set("OpenLinkEnabled", valueOf(conf.allowOpenLinks));
             table.set("ListenChatEnabled", valueOf(conf.allowListenChat));
-            table.set("IsPojavLauncher", valueOf(IsRunningOnPojavLauncher));
             functions.set("Config", table);
         }
         functions.set("PlaySound", new ThreeArgFunction() {
@@ -651,11 +649,10 @@ public class Minecraft extends TwoArgFunction {
         return table;
     }
 
-    public Minecraft(Config conf, Logger logger, ArrayList<LuaGUI> guis, boolean runningOnPojavLauncher, ArrayList<LuaEvent> mainMenuListeners, Globals g) {
+    public Minecraft(Config conf, Logger logger, ArrayList<LuaGUI> guis, ArrayList<LuaEvent> mainMenuListeners, Globals g) {
         this.conf = conf;
         this.LOGGER = logger;
         this.guis = guis;
-        this.IsRunningOnPojavLauncher = runningOnPojavLauncher;
         this.mainMenuListeners = mainMenuListeners;
     }
 }

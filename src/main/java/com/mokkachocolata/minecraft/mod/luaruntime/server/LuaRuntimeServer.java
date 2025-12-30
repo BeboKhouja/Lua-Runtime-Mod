@@ -212,7 +212,6 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
 
     @Override
     public void onInitializeServer() {
-        LOGGER.info("SpongePowered LUAU Subsystem Version=0.8.7 Source=file:/home/user/net.fabricmc/sponge-mixin/0.15.3+mixin.0.8.7/51ee0a44ab05f6fddd66b09e66b3a16904f9c55d/sponge-mixin-0.15.3+mixin.0.8.7.jar Service=Knot/Fabric Env=CLIENT                       Just kidding obviously"); // Why not
         Instance = this;
         File scriptsFolder = new File(FabricLoader.getInstance().getGameDir().toFile(), "lua");
         File config = new File(FabricLoader.getInstance().getConfigDir().toFile(), "lua_runtime_config_server.json");
@@ -223,7 +222,7 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
                                 false,
                                 "$local"
                         )
-                }, true);
+                }, true, false);
                 FileWriter writer = createConfigFile(config);
                 writer.close();
             } catch (IOException e) {
@@ -240,7 +239,7 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
                     JSONObject object = urls.getJSONObject(i);
                     urlConfigs.add(new ConfigServer.URLConfig(object.getBoolean("allow"), object.getString("url")));
                 }
-                conf = new ConfigServer(toArray(urlConfigs, ConfigServer.URLConfig.class), configJSON.getBoolean("allowListenChat"));
+                conf = new ConfigServer(toArray(urlConfigs, ConfigServer.URLConfig.class), configJSON.getBoolean("allowListenChat"), configJSON.optBoolean("allowLuaJavaLibrary", false));
             } catch (Exception e) {
                 LOGGER.error("An error occurred trying to read the config file!");
                 throw new RuntimeException(e);
@@ -248,7 +247,7 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
         }
         if (!scriptsFolder.exists()) scriptsFolder.mkdir();
         Globals g = JsePlatform.standardGlobals();
-        g.set("luajava", LuaValue.NIL);
+        if (!(conf.allowLuaJavaLibrary)) g.set("luajava", LuaValue.NIL);
         LuaInstance = new Minecraft();
         g.load(LuaInstance);
         for (File child : Objects.requireNonNull(scriptsFolder.listFiles())) {
@@ -278,6 +277,7 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
         urls.put(local);
         configJSON.put("urls", urls);
         configJSON.put("allowListenChat", false);
+        configJSON.put("allowLuaJavaLibrary", false);
         FileWriter writer = new FileWriter(config);
         writer.write(configJSON.toString(4));
         return writer;

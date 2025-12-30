@@ -28,8 +28,8 @@ public abstract class MainMenuMixin extends Screen {
     @Inject(at = @At("RETURN"), method = "init")
     private void versions(CallbackInfo ci) {
         LuaRuntimeClient.lua_runtime_mod$loaded = true;
-        this.addDrawableChild(new TextWidget(0, 0, 90, 10, Text.of("Lua Runtime " + Consts.Version), textRenderer));
-        this.addDrawableChild(new TextWidget(0, 10, 120, 10, Text.of("Powered by LuaJ v3.0.1"), textRenderer));
+//        this.addDrawableChild(new TextWidget(0, 0, 90, 10, Text.of("Lua Runtime " + Consts.Version), textRenderer));
+//        this.addDrawableChild(new TextWidget(0, 10, 120, 10, Text.of("Powered by LuaJ v3.0.1"), textRenderer));
         lua_runtime_mod$callScriptsMenuListeners();
     }
 
