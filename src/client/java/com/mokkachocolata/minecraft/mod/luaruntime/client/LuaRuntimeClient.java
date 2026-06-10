@@ -37,6 +37,7 @@ public class LuaRuntimeClient implements ClientModInitializer {
     public static LuaRuntimeClient Instance;
     @Unique public static boolean lua_runtime_mod$loaded = false;
     public Minecraft LuaInstance;
+    private File configFile;
     public ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee = new ee.eee.eeee.eeeee.eeeeee.eeeeeee.eeeeeeee.eeeeeeeee.eeeeeeeeee.eeeeeeeeeee.eeeeeeeeeeee.eeeeeeeeeeeee();
     public Config conf;
     private final ArrayList<LuaGUI> guis = new ArrayList<>();
@@ -71,7 +72,8 @@ public class LuaRuntimeClient implements ClientModInitializer {
         System.setProperty("java.awt.headless", "false");
         Instance = this;
         File scriptsFolder = new File(FabricLoader.getInstance().getGameDir().toFile(), "lua");
-        File config = new File(FabricLoader.getInstance().getConfigDir().toFile(), "lua_runtime_config.json");
+        configFile = new File(FabricLoader.getInstance().getConfigDir().toFile(), "lua_runtime_config.json");
+        File config = configFile;
         if (!config.exists()) {
             try {
                 conf = new Config(false, false, new Config.URLConfig[] {
@@ -79,7 +81,7 @@ public class LuaRuntimeClient implements ClientModInitializer {
                                 false,
                                 "$local"
                         )
-                }, true, false, true, false, false, false);
+                }, true, false, true, false, false, false, true);
                 FileWriter writer = createConfigFile(config);
                 writer.close();
             } catch (IOException e) {
@@ -105,7 +107,8 @@ public class LuaRuntimeClient implements ClientModInitializer {
                         configJSON.getBoolean("allowOpenLinks"),
                         configJSON.getBoolean("allowListenChat"),
                         configJSON.optBoolean("allowLuaJavaLibrary", false),
-                        configJSON.optBoolean("allowAllDefFunctions", false)
+                        configJSON.optBoolean("allowAllDefFunctions", false),
+                        configJSON.optBoolean("allowLuaCommand", true)
                 );
             } catch (Exception e) {
                 LOGGER.error("An error occurred trying to read the config file!");
@@ -151,7 +154,7 @@ public class LuaRuntimeClient implements ClientModInitializer {
                                 "/assets/lua_runtime_mod/Minecraft.lua"),
                                 StandardCharsets.UTF_8
                 ).useDelimiter("\\A").next()).call();
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+        if (conf.allowLuaCommand) ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
             dispatcher.register(
                 ClientCommands.literal("lua")
                     .then(ClientCommands.argument("code", StringArgumentType.greedyString())
@@ -185,6 +188,34 @@ public class LuaRuntimeClient implements ClientModInitializer {
         }
     }
 
+    public void saveConfig() {
+        try {
+            JSONObject json = new JSONObject();
+            json.put("allowCommands", conf.allowCommands);
+            json.put("allowChat", conf.allowChat);
+            JSONArray urls = new JSONArray();
+            for (Config.URLConfig urlConfig : conf.urls) {
+                JSONObject urlObj = new JSONObject();
+                urlObj.put("url", urlConfig.url);
+                urlObj.put("allow", urlConfig.allow);
+                urls.put(urlObj);
+            }
+            json.put("urls", urls);
+            json.put("allowCopy", conf.allowCopy);
+            json.put("allowPaste", conf.allowPaste);
+            json.put("allowOpenLinks", conf.allowOpenLinks);
+            json.put("allowListenChat", conf.allowListenChat);
+            json.put("allowLuaJavaLibrary", conf.allowLuaJavaLibrary);
+            json.put("allowAllDefFunctions", conf.allowAllDefFunctions);
+            json.put("allowLuaCommand", conf.allowLuaCommand);
+            FileWriter writer = new FileWriter(configFile);
+            writer.write(json.toString(4));
+            writer.close();
+        } catch (IOException e) {
+            LOGGER.error("Failed to save config: {}", e.getMessage());
+        }
+    }
+
     private static @NotNull FileWriter createConfigFile(File config) throws IOException {
         config.createNewFile();
         JSONObject configJSON = new JSONObject();
@@ -202,6 +233,7 @@ public class LuaRuntimeClient implements ClientModInitializer {
         configJSON.put("allowListenChat", false);
         configJSON.put("allowLuaJavaLibrary", false);
         configJSON.put("allowAllDefFunctions", false);
+        configJSON.put("allowLuaCommand", true);
         FileWriter writer = new FileWriter(config);
         writer.write(configJSON.toString(4));
         return writer;

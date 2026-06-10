@@ -11,6 +11,7 @@ public class Config {
     public boolean allowListenChat;
     public boolean allowLuaJavaLibrary;
     public boolean allowAllDefFunctions;
+    public boolean allowLuaCommand;
     public Config(
             boolean allowCommands,
             boolean allowChat,
@@ -20,7 +21,8 @@ public class Config {
             boolean allowOpenLinks,
             boolean allowListenChat,
             boolean allowLuaJavaLibrary,
-            boolean allowAllDefFunctions
+            boolean allowAllDefFunctions,
+            boolean allowLuaCommand
     ) {
         this.allowCommands = allowCommands;
         this.allowChat = allowChat;
@@ -31,6 +33,7 @@ public class Config {
         this.allowListenChat = allowListenChat;
         this.allowLuaJavaLibrary = allowLuaJavaLibrary;
         this.allowAllDefFunctions = allowAllDefFunctions;
+        this.allowLuaCommand = allowLuaCommand;
     }
     public static class URLConfig {
         public boolean allow;
