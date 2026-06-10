@@ -1,11 +1,11 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client;
 
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.gui.widget.TextWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 /**
  * A GUI designed for when a script error occurs.
@@ -14,32 +14,31 @@ import net.minecraft.text.Text;
  * @apiNote This is designed for when the game has started.
  */
 public class ScriptErrorInGame extends Screen {
-    private final TextRenderer renderer;
+    private final Font renderer;
     private final Exception exception;
 
-    public ScriptErrorInGame(TextRenderer renderer, Exception exception) {
-        super(Text.literal("Script Error"));
+    public ScriptErrorInGame(Font renderer, Exception exception) {
+        super(Component.literal("Script Error"));
         this.renderer = renderer;
         this.exception = exception;
     }
 
     @Override
     protected void init() {
-        final TextWidget title = new TextWidget(Text.literal("Script Error"), renderer);
-        title.setPosition(50, 50);
-        final TextFieldWidget errorWidget = new TextFieldWidget(renderer, 50, 70, 550, 200, Text.literal(exception.getMessage()));
-        errorWidget.setText(exception.getMessage());
+        final StringWidget title = new StringWidget(Component.literal("Script Error"), renderer);
+        title.setX(50); title.setY(50);
+        final EditBox errorWidget = new EditBox(renderer, 50, 70, 550, 200, Component.literal(exception.getMessage()));
+        errorWidget.setValue(exception.getMessage());
         errorWidget.setEditable(false);
-        addDrawableChild(
-                ButtonWidget.builder(Text.literal("Close"), a -> {
-                    assert client != null;
-                    client.setScreen(null);
+        addRenderableWidget(
+                Button.builder(Component.literal("Close"), a -> {
+                    minecraft.setScreen(null);
                 })
-                    .position(520, 300)
+                    .pos(520, 300)
                     .size(80, 23)
                     .build()
         );
-        addDrawableChild(title);
-        addDrawableChild(errorWidget);
+        addRenderableWidget(title);
+        addRenderableWidget(errorWidget);
     }
 }

@@ -1,5 +1,6 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -12,31 +13,28 @@ import com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api.gui.GUI;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api.gui.Keys;
 import com.mokkachocolata.minecraft.mod.luaruntime.lua.api.Property;
 import com.yevdo.jwildcard.JWildcard;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.minecraft.SharedConstants;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ConfirmLinkScreen;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.sound.Sound;
-import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.client.sound.SoundManager;
-import net.minecraft.client.sound.WeightedSoundSet;
-import net.minecraft.client.toast.SystemToast;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.client.util.Window;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec2f;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.client.gui.screens.ConfirmLinkScreen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.sounds.Sound;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.client.sounds.SoundManager;
+import net.minecraft.client.sounds.WeighedSoundEvents;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.luaj.vm2.*;
@@ -117,10 +115,10 @@ public class Minecraft extends TwoArgFunction {
         functions.set("GetWindowScale", new VarArgFunction() {
             @Override
             public Varargs invoke(Varargs args) {
-                Window window = MinecraftClient.getInstance().getWindow();
+                var window = net.minecraft.client.Minecraft.getInstance().getWindow();
                 return varargsOf(
-                        LuaValue.valueOf(window.getScaledWidth()),
-                        LuaValue.valueOf(window.getScaledHeight())
+                        LuaValue.valueOf(window.getGuiScaledWidth()),
+                        LuaValue.valueOf(window.getGuiScaledHeight())
                 );
             }
         });
@@ -129,7 +127,7 @@ public class Minecraft extends TwoArgFunction {
             public LuaValue call(LuaValue arg1, LuaValue arg2) {
                 new Thread(() -> {
                     try {
-                        Thread.sleep(arg2.checklong()); // This means the wait time can go up to 9,223,372,036,854,775,807, which is 12 centuries. You'd have died at this point the timer ends.
+                        Thread.sleep(arg2.checklong());
                         arg1.checkfunction().call();
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
@@ -138,50 +136,17 @@ public class Minecraft extends TwoArgFunction {
                 return NONE;
             }
         });
-//        arg2.set("wait", new OneArgFunction() {
-//            @Override
-//            public LuaValue call(LuaValue arg) {
-//                g.yield(NONE);
-//                new Thread(() -> {
-//                    try {
-//                        Thread.sleep(arg.checklong());
-//                        g.running.resume(NONE);
-//                    } catch (InterruptedException e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                }).start();
-//                return NONE;
-//            }
-//        });
         {
             LuaValue config = tableOf();
             config.set("GetFOV", new ZeroArgFunction() {
                 @Override
                 public LuaValue call() {
-                    return valueOf(MinecraftClient.getInstance().options.getFov().getValue());
+                    return valueOf(net.minecraft.client.Minecraft.getInstance().options.fov().get());
                 }
             });
         }
-        /*functions.set("PixelRaycast", new ThreeArgFunction() {
-            @Override
-            public LuaValue call(LuaValue arg, LuaValue arg2, LuaValue arg3) {
-                double maxReach = arg3.checkdouble();
-                float tickDelta = 1.0F;
-                boolean includeFluids = true;
-                MinecraftClient client = MinecraftClient.getInstance();
-                Window window = client.getWindow();
-                int width = window.getScaledWidth();
-                int height = window.getScaledHeight();
-                assert client.cameraEntity != null;
-                Vec3d cameraDirection = client.cameraEntity.getRotationVec(tickDelta);
-                double fov = client.options.getFov().getValue();
-                double angleSize = fov/height;
-                Vector3f verticalRotationAxis = new Vector3f((Vector3fc) cameraDirection);
-                return NONE*//*value*//*;
-            }
-        });*/
         functions.set("Platform", System.getProperty("os.name"));
-        functions.set("Version", SharedConstants.getGameVersion().name());
+        functions.set("Version", SharedConstants.getCurrentVersion().name());
         functions.set("Loader", "Fabric");
         functions.set("LuaRuntimeVersion", Consts.Version);
         functions.set("ClientOrServer", "Client");
@@ -206,7 +171,7 @@ public class Minecraft extends TwoArgFunction {
             @Override
             public LuaValue call(LuaValue arg) {
                 if (!conf.allowCopy) throw new LuaError("Copying strings are not allowed by config");
-                MinecraftClient.getInstance().keyboard.setClipboard(arg.toString());
+                net.minecraft.client.Minecraft.getInstance().keyboardHandler.setClipboard(arg.toString());
                 return NONE;
             }
         });
@@ -214,7 +179,7 @@ public class Minecraft extends TwoArgFunction {
             @Override
             public LuaValue call(LuaValue arg, LuaValue arg2) {
                 if (!conf.allowOpenLinks) throw new LuaError("Opening links are not allowed by config");
-                ConfirmLinkScreen.open(arg2.isnil() ? null : guis.get(arg2.getmetatable().get("__index").checkint()), arg.toString());
+                ConfirmLinkScreen.confirmLinkNow(arg2.isnil() ? null : guis.get(arg2.getmetatable().get("__index").checkint()), arg.toString());
                 return NONE;
             }
         });
@@ -224,29 +189,28 @@ public class Minecraft extends TwoArgFunction {
             plrMetaTable.set("__index", new VarArgFunction() {
                 @Override
                 public Varargs invoke(Varargs v) {
-                    final MinecraftClient mcInstance = MinecraftClient.getInstance();
+                    final net.minecraft.client.Minecraft mcInstance = net.minecraft.client.Minecraft.getInstance();
                     final String index = v.arg(2).checkstring().toString();
                     assert mcInstance.player != null;
                     switch (index) {
                         case "IsPlaying":
-                            return varargsOf(new LuaValue[]{LuaValue.valueOf(mcInstance.isConnectedToLocalServer())});
+                            return varargsOf(new LuaValue[]{LuaValue.valueOf(mcInstance.isLocalServer())});
                         case "Position":
-                            // Courtesy of a bug report
-                            Vec3d position = mcInstance.player.getPos();
+                            Vec3 position = mcInstance.player.position();
                             return varargsOf(new LuaValue[]{
                                     LuaValue.valueOf(position.x),
                                     LuaValue.valueOf(position.y),
                                     LuaValue.valueOf(position.z),
                             });
                         case "Rotation":
-                            ClientPlayerEntity player = mcInstance.player;
-                            Vec2f rotation = new Vec2f(player.getPitch(), player.getYaw());
+                            LocalPlayer player = mcInstance.player;
+                            Vec2 rotation = new Vec2(player.getXRot(), player.getYRot());
                             return varargsOf(new LuaValue[]{
                                     LuaValue.valueOf(rotation.x),
                                     LuaValue.valueOf(rotation.y),
                             });
                         case "Dimension":
-                            return valueOf(mcInstance.world.getDimensionEntry().getIdAsString());
+                            return valueOf(mcInstance.level.dimension().identifier().toString());
                         default:
                             return NIL;
                     }
@@ -267,7 +231,7 @@ public class Minecraft extends TwoArgFunction {
                 }
             });
             plrTable.setmetatable(plrMetaTable);
-            plrTable.set("Username", valueOf(MinecraftClient.getInstance().getSession().getUsername()));
+            plrTable.set("Username", valueOf(net.minecraft.client.Minecraft.getInstance().getUser().getName()));
         }
         functions.set("Player", plrTable);
         {
@@ -330,21 +294,19 @@ public class Minecraft extends TwoArgFunction {
         functions.set("AddCommand", new ThreeArgFunction() {
             @Override
             public LuaValue call(LuaValue arg1, LuaValue arg2, LuaValue arg3) {
-                // Get around Java's stupid lambda non-final error
                 var obj = new Object() {
                     CommandContext<FabricClientCommandSource> Context;
                 };
                 OneArgFunction sendFeedback = new OneArgFunction() {
                     @Override
                     public LuaValue call(LuaValue arg) {
-                        obj.Context.getSource().sendFeedback(Text.literal(arg.toString()));
+                        obj.Context.getSource().sendFeedback(Component.literal(arg.toString()));
                         return NONE;
                     }
                 };
                 ClientCommandRegistrationCallback.EVENT.register(
                         (dispatcher, Nothing) -> {
-                            var commandManager = ClientCommandManager.literal(arg1.toString());
-                            // That was way difficult than we thought, took 3 hours to get this to work
+                            var commandManager = ClientCommands.literal(arg1.toString());
                             if (arg2.istable()) {
                                 HashMap<String, ArgumentType<?>> properties = new HashMap<>();
                                 ArrayList<RequiredArgumentBuilder<FabricClientCommandSource, ?>> list = new ArrayList<>();
@@ -361,7 +323,7 @@ public class Minecraft extends TwoArgFunction {
                                         default -> throw new LuaError("Unexpected type: " + type);
                                     };
                                     String name = arg2.get(i).checktable().get("name").toString();
-                                    list.add(ClientCommandManager.argument(name, argumentType));
+                                    list.add(ClientCommands.argument(name, argumentType));
                                     properties.put(name, argumentType);
                                 }
                                 list.getLast().executes(context -> {
@@ -394,7 +356,7 @@ public class Minecraft extends TwoArgFunction {
                                     table.set("SendFeedback", new OneArgFunction() {
                                         @Override
                                         public LuaValue call(LuaValue arg) {
-                                            obj.Context.getSource().sendFeedback(Text.literal(arg.toString()));
+                                            obj.Context.getSource().sendFeedback(Component.literal(arg.toString()));
                                             return NONE;
                                         }
                                     });
@@ -435,14 +397,14 @@ public class Minecraft extends TwoArgFunction {
                 if (volume.isnil()) volume = valueOf(.5);
                 final LuaValue finalVolume = volume;
                 final LuaValue finalPitch = pitch;
-                MinecraftClient.getInstance().getSoundManager().play(new SoundInstance() {
+                net.minecraft.client.Minecraft.getInstance().getSoundManager().play(new SoundInstance() {
                     @Override
-                    public Identifier getId() {
-                        return Identifier.of(arg.toString());
+                    public Identifier getIdentifier() {
+                        return Identifier.parse(arg.toString());
                     }
 
                     @Override
-                    public @Nullable WeightedSoundSet getSoundSet(SoundManager soundManager) {
+                    public @Nullable WeighedSoundEvents resolve(SoundManager soundManager) {
                         return null;
                     }
 
@@ -452,12 +414,12 @@ public class Minecraft extends TwoArgFunction {
                     }
 
                     @Override
-                    public SoundCategory getCategory() {
+                    public SoundSource getSource() {
                         return null;
                     }
 
                     @Override
-                    public boolean isRepeatable() {
+                    public boolean isLooping() {
                         return false;
                     }
 
@@ -467,7 +429,7 @@ public class Minecraft extends TwoArgFunction {
                     }
 
                     @Override
-                    public int getRepeatDelay() {
+                    public int getDelay() {
                         return 0;
                     }
 
@@ -497,7 +459,7 @@ public class Minecraft extends TwoArgFunction {
                     }
 
                     @Override
-                    public AttenuationType getAttenuationType() {
+                    public SoundInstance.Attenuation getAttenuation() {
                         return null;
                     }
                 });
@@ -507,18 +469,18 @@ public class Minecraft extends TwoArgFunction {
         functions.set("RegisterKeybind", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaValue arg2, LuaValue arg3) {
-                KeyBinding bind = new KeyBinding(
+                KeyMapping bind = new KeyMapping(
                         "com.mokkachocolata.minecraft.mod.luaruntime.keys." + arg2,
-                        InputUtil.Type.KEYSYM,
+                        InputConstants.Type.KEYSYM,
                         arg3.checkint(),
-                        "com.mokkachocolata.minecraft.mod.luaruntime.keys.category"
+                        KeyMapping.Category.MISC
                 );
-                KeyBindingHelper.registerKeyBinding(bind);
+                KeyMappingHelper.registerKeyMapping(bind);
                 LuaValue table = tableOf();
                 table.set("GetPressed", new ZeroArgFunction() {
                     @Override
                     public LuaValue call() {
-                        return LuaValue.valueOf(bind.wasPressed());
+                        return LuaValue.valueOf(bind.consumeClick());
                     }
                 });
                 return table;
@@ -527,7 +489,7 @@ public class Minecraft extends TwoArgFunction {
         functions.set("ShutdownClient", new ZeroArgFunction() {
             @Override
             public LuaValue call() {
-                MinecraftClient.getInstance().close();
+                net.minecraft.client.Minecraft.getInstance().close();
                 return NONE;
             }
         });
@@ -535,9 +497,9 @@ public class Minecraft extends TwoArgFunction {
             @Override
             public LuaValue call(LuaValue arg) {
                 LuaEvent event = new LuaEvent(arg.checkfunction());
-                if (conf.allowListenChat) // When disabled, the function won't be called
+                if (conf.allowListenChat)
                     ServerMessageEvents.CHAT_MESSAGE.register((message, player, none) ->
-                            event.Call(valueOf(Objects.requireNonNull(message.getContent().getLiteralString())), valueOf(Objects.requireNonNull(player.getName().getLiteralString())))
+                            event.Call(valueOf(Objects.requireNonNull(message.signedContent())), valueOf(Objects.requireNonNull(player.getName().getString())))
                     );
                 return event.GetTable();
             }
@@ -545,8 +507,11 @@ public class Minecraft extends TwoArgFunction {
         functions.set("DisplayToast", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                MinecraftClient.getInstance().getToastManager().add(
-                        SystemToast.create(MinecraftClient.getInstance(), SystemToast.Type.NARRATOR_TOGGLE, Text.of(arg1.toString()), Text.of(arg2.toString()))
+                SystemToast.add(
+                        net.minecraft.client.Minecraft.getInstance().getToastManager(),
+                        SystemToast.SystemToastId.NARRATOR_TOGGLE,
+                        Component.literal(arg1.toString()),
+                        Component.literal(arg2.toString())
                 );
                 return NONE;
             }
@@ -564,11 +529,11 @@ public class Minecraft extends TwoArgFunction {
             @Override
             public LuaValue call(LuaValue arg) {
                 if (!conf.allowCommands) throw new LuaError("Commands are not allowed by config");
-                ClientPlayerEntity player = MinecraftClient.getInstance().player;
+                LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
                 if (player != null) {
-                    CommandManager commandManager = Objects.requireNonNull(player.getServer()).getCommandManager();
-                    ServerCommandSource commandSource = player.getServer().getCommandSource();
-                    commandManager.executeWithPrefix(commandSource, arg.toString());
+                    Commands commandManager = Objects.requireNonNull(net.minecraft.client.Minecraft.getInstance().getSingleplayerServer()).getCommands();
+                    CommandSourceStack commandSource = net.minecraft.client.Minecraft.getInstance().getSingleplayerServer().createCommandSourceStack();
+                    commandManager.performPrefixedCommand(commandSource, arg.toString());
                 }
                 return NONE;
             }
@@ -576,9 +541,9 @@ public class Minecraft extends TwoArgFunction {
         functions.set("SendMessage", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaValue arg, LuaValue arg2) {
-                assert MinecraftClient.getInstance().player != null;
+                assert net.minecraft.client.Minecraft.getInstance().player != null;
                 if (arg2.isnil()) arg2 = valueOf(false);
-                MinecraftClient.getInstance().player.sendMessage(Text.literal(arg.toString()), arg2.toboolean());
+                net.minecraft.client.Minecraft.getInstance().player.sendSystemMessage(Component.literal(arg.toString()));
                 return NONE;
             }
         });
@@ -586,15 +551,15 @@ public class Minecraft extends TwoArgFunction {
             @Override
             public LuaValue call(LuaValue arg) {
                 if (!conf.allowChat) throw new LuaError("Sending messages to other players are not allowed by config");
-                assert MinecraftClient.getInstance().player != null;
-                MinecraftClient.getInstance().player.networkHandler.sendChatMessage(arg.toString());
+                assert net.minecraft.client.Minecraft.getInstance().player != null;
+                net.minecraft.client.Minecraft.getInstance().player.connection.sendChat(arg.toString());
                 return NONE;
             }
         });
         functions.set("GetFPS", new ZeroArgFunction() {
             @Override
             public LuaValue call() {
-                return LuaValue.valueOf(MinecraftClient.getInstance().getCurrentFps());
+                return LuaValue.valueOf(net.minecraft.client.Minecraft.getInstance().getFps());
             }
         });
         LuaValue ticks = tableOf();
@@ -614,7 +579,7 @@ public class Minecraft extends TwoArgFunction {
                 @Override
                 public LuaValue call(LuaValue arg) {
                     LuaEvent event = new LuaEvent(arg.checkfunction());
-                    ClientTickEvents.START_WORLD_TICK.register(world -> event.Call());
+                    ClientTickEvents.START_LEVEL_TICK.register(world -> event.Call());
                     return event.GetTable();
                 }
             });
@@ -630,7 +595,7 @@ public class Minecraft extends TwoArgFunction {
                 @Override
                 public LuaValue call(LuaValue arg) {
                     LuaEvent event = new LuaEvent(arg.checkfunction());
-                    ClientTickEvents.END_WORLD_TICK.register(world -> event.Call());
+                    ClientTickEvents.END_LEVEL_TICK.register(world -> event.Call());
                     return event.GetTable();
                 }
             });

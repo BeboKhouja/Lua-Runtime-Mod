@@ -1,6 +1,6 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.lua.api;
 
-import net.minecraft.util.math.ColorHelper;
+import net.minecraft.util.ARGB;
 import org.luaj.vm2.LuaTable;
 
 public class Color3 {
@@ -15,7 +15,7 @@ public class Color3 {
     public static int fromTable(LuaTable color) {
         if (!VerifyColor3LuaTable((color))) return 0;
 
-        return ColorHelper.fromFloats(
+        return ARGB.colorFromFloat(
                 color.get("A").tofloat(),
                 color.get("R").tofloat(),
                 color.get("G").tofloat(),

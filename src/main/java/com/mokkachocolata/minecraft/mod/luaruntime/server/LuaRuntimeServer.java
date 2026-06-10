@@ -80,7 +80,7 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
                 }
             });
             functions.set("Platform", System.getProperty("os.name"));
-            functions.set("Version", SharedConstants.getGameVersion().name());
+            functions.set("Version", SharedConstants.getCurrentVersion().name());
             functions.set("Loader", "Fabric");
             functions.set("LuaRuntimeVersion", Consts.Version);
             functions.set("ClientOrServer", "Server");
@@ -160,7 +160,7 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
                     LuaEvent event = new LuaEvent(arg.checkfunction());
                     if (conf.allowListenChat) // When disabled, the function won't be called
                         ServerMessageEvents.CHAT_MESSAGE.register((message, player, none) ->
-                                event.Call(valueOf(Objects.requireNonNull(message.getContent().getLiteralString())), valueOf(Objects.requireNonNull(player.getName().getLiteralString())))
+                                event.Call(valueOf(Objects.requireNonNull(message.signedContent())), valueOf(Objects.requireNonNull(player.getName().getString())))
                         );
                     return event.GetTable();
                 }
@@ -182,7 +182,7 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
                     @Override
                     public LuaValue call(LuaValue arg) {
                         LuaEvent event = new LuaEvent(arg.checkfunction());
-                        ServerTickEvents.START_WORLD_TICK.register(world -> event.Call());
+                        ServerTickEvents.START_LEVEL_TICK.register(world -> event.Call());
                         return event.GetTable();
                     }
                 });
@@ -198,7 +198,7 @@ public class LuaRuntimeServer implements DedicatedServerModInitializer {
                     @Override
                     public LuaValue call(LuaValue arg) {
                         LuaEvent event = new LuaEvent(arg.checkfunction());
-                        ServerTickEvents.END_WORLD_TICK.register(world -> event.Call());
+                        ServerTickEvents.END_LEVEL_TICK.register(world -> event.Call());
                         return event.GetTable();
                     }
                 });

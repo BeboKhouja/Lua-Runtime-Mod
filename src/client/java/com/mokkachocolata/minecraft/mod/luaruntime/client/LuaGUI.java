@@ -2,9 +2,9 @@ package com.mokkachocolata.minecraft.mod.luaruntime.client;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 
@@ -18,22 +18,22 @@ public class LuaGUI extends Screen {
     public Screen parent;
     public boolean Cancelable = true;
     public ArrayList<LuaEvent> CloseCallback = new ArrayList<>();
-    public ArrayList<ClickableWidget> clickableWidgets = new ArrayList<>();
+    public ArrayList<AbstractWidget> clickableWidgets = new ArrayList<>();
 
-    public LuaGUI(Text title) {
+    public LuaGUI(Component title) {
         super(title);
     }
 
 
-    public void addClickableDrawableChild(ClickableWidget element) {
+    public void addClickableDrawableChild(AbstractWidget element) {
         clickableWidgets.add(element);
         init();
     }
 
     @Override
     protected void init() {
-        for (ClickableWidget widget : clickableWidgets) {
-            addDrawableChild(widget);
+        for (AbstractWidget widget : clickableWidgets) {
+            addRenderableWidget(widget);
         }
     }
 
@@ -48,9 +48,8 @@ public class LuaGUI extends Screen {
     }
 
     @Override
-    public void close() {
-        assert client != null;
+    public void onClose() {
         if (!Cancelable) return;
-        client.setScreen(parent);
+        minecraft.setScreen(parent);
     }
 }

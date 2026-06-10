@@ -77,3 +77,20 @@ Color3.Green = Color3.new(0, 1, 0)
 Color3.Blue = Color3.new(0, 0, 1)
 Color3.White = Color3.new(1, 1, 1)
 Color3.Black = Color3.new(0, 0, 0)
+
+-- Startup announcement (fires once when the main menu first appears)
+local _lrm_announced = false
+Minecraft.AddClientLoadedListener(function()
+    if not _lrm_announced then
+        _lrm_announced = true
+        Minecraft.DisplayToast(
+            "Lua Runtime Mod",
+            "v" .. Minecraft.LuaRuntimeVersion .. " | Minecraft " .. Minecraft.Version .. " (" .. Minecraft.Loader .. ")"
+        )
+        Minecraft.Print(
+            "Lua Runtime Mod v" .. Minecraft.LuaRuntimeVersion ..
+            " running on Minecraft " .. Minecraft.Version ..
+            " via " .. Minecraft.Loader
+        )
+    end
+end)

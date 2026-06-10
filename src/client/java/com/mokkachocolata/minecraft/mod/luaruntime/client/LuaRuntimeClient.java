@@ -1,12 +1,16 @@
 package com.mokkachocolata.minecraft.mod.luaruntime.client;
 
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api.Minecraft;
 import com.mokkachocolata.minecraft.mod.luaruntime.ee;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
+import net.minecraft.network.chat.Component;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
@@ -44,9 +48,9 @@ public class LuaRuntimeClient implements ClientModInitializer {
     }
     private void DisplayScriptError(Exception e) {
         if (lua_runtime_mod$loaded)
-            MinecraftClient.getInstance().execute(() ->
-                    MinecraftClient.getInstance().setScreen(
-                            new ScriptErrorInGame(MinecraftClient.getInstance().textRenderer, e)
+            net.minecraft.client.Minecraft.getInstance().execute(() ->
+                    net.minecraft.client.Minecraft.getInstance().setScreen(
+                            new ScriptErrorInGame(net.minecraft.client.Minecraft.getInstance().font, e)
                     )
             );
         else
@@ -147,6 +151,23 @@ public class LuaRuntimeClient implements ClientModInitializer {
                                 "/assets/lua_runtime_mod/Minecraft.lua"),
                                 StandardCharsets.UTF_8
                 ).useDelimiter("\\A").next()).call();
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+            dispatcher.register(
+                ClientCommands.literal("lua")
+                    .then(ClientCommands.argument("code", StringArgumentType.greedyString())
+                        .executes(context -> {
+                            String code = StringArgumentType.getString(context, "code");
+                            try {
+                                LuaValue result = g.load(code).call();
+                                if (result != LuaValue.NONE && !result.isnil())
+                                    context.getSource().sendFeedback(Component.literal(result.tojstring()));
+                            } catch (Exception e) {
+                                context.getSource().sendError(Component.literal(e.getMessage()));
+                            }
+                            return Command.SINGLE_SUCCESS;
+                        }))
+            )
+        );
         for (File child : Objects.requireNonNull(scriptsFolder.listFiles())) {
             try {
                 if (FilenameUtils.getExtension(child.toPath().toString()).equals("lua")) {

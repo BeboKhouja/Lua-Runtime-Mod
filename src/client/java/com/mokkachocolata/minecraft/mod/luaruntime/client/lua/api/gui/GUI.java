@@ -2,12 +2,12 @@ package com.mokkachocolata.minecraft.mod.luaruntime.client.lua.api.gui;
 
 import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaEvent;
 import com.mokkachocolata.minecraft.mod.luaruntime.client.LuaGUI;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.gui.widget.TextWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.network.chat.Component;
 import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
@@ -31,7 +31,7 @@ public class GUI extends OneArgFunction {
     @Override
     public LuaValue call(LuaValue arg) {
         LuaValue table = tableOf();
-        LuaGUI thisGui = new LuaGUI(Text.literal(arg.toString()));
+        LuaGUI thisGui = new LuaGUI(Component.literal(arg.toString()));
         LuaTable metaTable = tableOf();
         guis.add(thisGui);
         metaTable.set("__index", guis.size());
@@ -62,14 +62,14 @@ public class GUI extends OneArgFunction {
         table.set("Close", new ZeroArgFunction() {
             @Override
             public LuaValue call() {
-                thisGui.close();
+                thisGui.onClose();
                 return NONE;
             }
         });
         table.set("Display", new ZeroArgFunction() {
             @Override
             public LuaValue call() {
-                MinecraftClient.getInstance().setScreen(thisGui);
+                Minecraft.getInstance().setScreen(thisGui);
                 return NONE;
             }
         });
@@ -77,18 +77,18 @@ public class GUI extends OneArgFunction {
             @Override
             public LuaValue call(LuaValue arg1, LuaValue arg2) {
                 LuaValue table = tableOf();
-                ButtonWidget.Builder button = ButtonWidget.builder(Text.literal(arg1.toString()), p -> arg2.checkfunction().call());
+                Button.Builder button = Button.builder(Component.literal(arg1.toString()), p -> arg2.checkfunction().call());
                 table.set("SetTooltip", new OneArgFunction() {
                     @Override
                     public LuaValue call(LuaValue arg) {
-                        button.tooltip(Tooltip.of(Text.literal(arg.toString())));
+                        button.tooltip(Tooltip.create(Component.literal(arg.toString())));
                         return NONE;
                     }
                 });
                 table.set("SetPosition", new TwoArgFunction() {
                     @Override
                     public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                        button.position(arg1.toint(), arg2.toint());
+                        button.pos(arg1.toint(), arg2.toint());
                         return NONE;
                     }
                 });
@@ -102,7 +102,7 @@ public class GUI extends OneArgFunction {
                 table.set("AddDrawableChild", new ZeroArgFunction() {
                     @Override
                     public LuaValue call() {
-                        ButtonWidget builded = button.build();
+                        Button builded = button.build();
                         int index = thisGui.clickableWidgets.size();
                         thisGui.addClickableDrawableChild(builded);
                         LuaValue meta = tableOf();
@@ -122,14 +122,14 @@ public class GUI extends OneArgFunction {
                         meta.set("SetText", new OneArgFunction() {
                             @Override
                             public LuaValue call(LuaValue arg) {
-                                builded.setMessage(Text.literal(arg.toString()));
+                                builded.setMessage(Component.literal(arg.toString()));
                                 return NONE;
                             }
                         });
                         meta.set("SetTooltip", new OneArgFunction() {
                             @Override
                             public LuaValue call(LuaValue arg) {
-                                builded.setTooltip(Tooltip.of(Text.literal(arg.toString())));
+                                builded.setTooltip(Tooltip.create(Component.literal(arg.toString())));
                                 return NONE;
                             }
                         });
@@ -143,7 +143,7 @@ public class GUI extends OneArgFunction {
                         meta.set("SetSize", new TwoArgFunction() {
                             @Override
                             public LuaValue call(LuaValue arg1, LuaValue arg2) {
-                                builded.setDimensions(arg1.toint() / 2 - 205, arg2.toint());
+                                builded.setSize(arg1.toint() / 2 - 205, arg2.toint());
                                 return NONE;
                             }
                         });
@@ -157,11 +157,11 @@ public class GUI extends OneArgFunction {
             @Override
             public LuaValue call(LuaValue arg1) {
                 LuaValue table = tableOf();
-                TextWidget button = new TextWidget(Text.literal(arg1.toString()), MinecraftClient.getInstance().textRenderer);
+                StringWidget button = new StringWidget(Component.literal(arg1.toString()), Minecraft.getInstance().font);
                 table.set("SetText", new OneArgFunction() {
                     @Override
                     public LuaValue call(LuaValue arg) {
-                        button.setMessage(Text.literal(arg.toString()));
+                        button.setMessage(Component.literal(arg.toString()));
                         return NONE;
                     }
                 });
@@ -210,11 +210,11 @@ public class GUI extends OneArgFunction {
             @Override
             public LuaValue call(LuaValue arg1, LuaValue arg2) {
                 LuaValue table = tableOf();
-                TextFieldWidget button = new TextFieldWidget(MinecraftClient.getInstance().textRenderer, arg1.toint(), arg2.toint(), Text.empty());
+                EditBox button = new EditBox(Minecraft.getInstance().font, arg1.toint(), arg2.toint(), Component.empty());
                 table.set("SetPlaceholder", new OneArgFunction() {
                     @Override
                     public LuaValue call(LuaValue arg) {
-                        button.setPlaceholder(Text.literal(arg.toString()));
+                        button.setHint(Component.literal(arg.toString()));
                         return NONE;
                     }
                 });
@@ -257,7 +257,7 @@ public class GUI extends OneArgFunction {
                 table.set("GetText", new ZeroArgFunction() {
                     @Override
                     public LuaValue call() {
-                        return LuaValue.valueOf(button.getText());
+                        return LuaValue.valueOf(button.getValue());
                     }
                 });
                 table.set("AddDrawableChild", new ZeroArgFunction() {
